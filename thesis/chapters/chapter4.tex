@@ -1,37 +1,31 @@
-\chapter{Concept\label{cha:chapter4}}
-This chapter introduces the architectural design of Component X. The component consists of subcomponent A, B and C.
+\chapter{Design\label{cha:chapter4}}
 
-In the end of this chapter you should write a specification for your solution, including interfaces, protocols and parameters.
+overview of the testbed with the four components, copy the diagram from the abstract
 
-\section{Sub-component A\label{sec:conceptsuba}}
-The concept chapter provides a high-level explanation of your solution. Try to explain the overall structure with a picture. You can also use UML sequence diagrams for explanation.
+\section{Producer\label{sec:producer}}
 
-Figure \ref{fig:aliceandbob} illustrates the situation between Alice and Bob. (sequence diagram from www.websequencediagrams.com)
+explain to use a video file to simulate a live stream using FFmpeg, producing DASH and HLS simultaneously
 
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=9cm]{uml_seq_example.png}\\
-  \caption{Alice and Bob}
-  \label{fig:aliceandbob}
-\end{figure}
+bash script that
+    - run rust script to parse settings \Cref{sec:settings}
+    - an FFmpeg bash script file (example in appendix)
+    - run ffmpeg script
 
-\section{Sub-component B\label{sec:conceptsubb}}
+\section{Signer\label{sec:signer}}
 
-Lorem Ipsum...
+c2patool extension of HTTP server to receive FFmpeg output
 
-\section{Proposed API\label{sec:conceptapi}}
+optimization steps => Merkle Tree problem (DVR window, retransmission, etc.)
 
-Lorem Ipsum...
+\section{Content Delivery\label{sec:cdn}}
 
-\section{Layer X\label{sec:conceptlayerx}}
+cdn needs to relay content as quickly as possible
 
-Lorem Ipsum...
+replay channel crate
 
-\section{Interworking of X and Y\label{sec:conceptinter}}
+\section{Consumer\label{sec:consumer}}
 
-Lorem Ipsum...
+client needs to be able to consume DASH (dash.js) and HLS (hls.js), verify the C2PA manifests and tell the viewer the validity of the content
 
-\section{Interface Specification\label{sec:intspec}}
-
-Lorem Ipsum...
+svelte, dash.js, hls.js, c2pa verifier (WASM of c2pa-rs)
 

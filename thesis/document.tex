@@ -15,6 +15,13 @@
 \usepackage{scrlayer-scrpage}					% header and footer line
 \usepackage{todonotes}
 \usepackage{cleveref}
+\usepackage{tikz}
+
+\usetikzlibrary{shapes.geometric, arrows}
+
+\tikzstyle{component} = [rectangle, rounded corners, minimum height=1cm, minimum width=3cm, text centered, draw=black]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+
 % header and footer line - no header & footer line on pages where a new chapter starts
 \pagestyle{scrheadings}
 \ohead{Design and Implementation of Content Provenance\\using C2PA Signatures in Live Streaming}

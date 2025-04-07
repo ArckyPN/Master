@@ -1,5 +1,7 @@
 # Notes
 
+- external camera (Sony Edge Webcam not on Linux, alternative describing)
+
 ## Questions
 
 - Assistant Supervisor: all three?
@@ -38,7 +40,8 @@
     - each iteration time is measured how long it took
     - plot graph comparing the measured time each step
     - should show that new method is significantly faster (especially the longer it runs)
+- Alternative approaches:
+  - manifests on separate Server
+  - merkle stuff in MPD/Playlist
 
 ## FIXMEs
-
-- Fragment verification does not work, invalid Hashes

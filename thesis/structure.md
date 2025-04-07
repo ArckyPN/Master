@@ -11,6 +11,9 @@
     - (anything specific I should mention about DASH / HLS?)
   - C2PA (What is it?)
     - In-depth overview of all the components (Claim, Manifest, Assertions, etc.)
+    - Fragmented BMFF Manifest structure
+    - Merkle Trees
+    - BMFF Hashing
   - Concurrent Approaches (DRM?)
 - Requirements (What do I need? Rust, HTTP Server, FFmpeg, Website, DASH, HLS, etc.)
 - Design (of the testbed, the four components / include CLI)
@@ -23,17 +26,16 @@
   - Important Implementation Aspects / Challenges
     - C2PA-compliant TLS certificates
     - Low-Latency chunked Segments
-    - Signing Optimization (8 Segments per Merkle Tree) [see](/thesis/notes.md)
     - Lots of re-transmissions of updated Segments
+    - Signing Optimization (8 Segments per Merkle Tree) [see](/thesis/notes.md)
     - BMFF Hashing (Box Position added before each Box)
     - CDN caching (ReplayStream crate + DELETE from FFmpeg (extra) window size)
-    - TODO more?
   - GUI (examples images, probably best to keep this above in the Design section)
   - Documentation (helper shell scripts, install instructions?)
 - Evaluation
   - Performance Original Impl vs. New Live
   - Latency Impact
-  - more?
+  - Alternative approaches where to put the manifests (in Segments like currently, on separate Server or in the MPD/Playlist)
 - Conclusion
   - Summary
   - Dissemination

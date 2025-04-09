@@ -1,16 +1,35 @@
 \chapter{Requirements\label{cha:chapter3}}
 
-quick summary of the task and what it entails
+This chapter will outline the components required to fulfill the task of implementing a testbed utilizing C2PA manifests to sign a live stream as trustworthy.
 
 \section{Overview\label{sec:reqoverview}}
 
-
+To reiterate the task, the testbed is supposed to be able to create a live stream. The created live stream is to be signed with a C2PA manifest and then made available to be watched and also verified that the contained C2PA manifest are valid. 
 
 \section{Technical Requirements\label{sec:techreq}}
 
-something (FFmpeg) to create a DASH and HLS live stream simultaneously
+These requirements can be separated into four components: Producer, Signer, Distributer and Consumer. 
 
-Signing should ideally have little to no effect on the content delivery, overhead, latency, quality, etc.
-a "cdn" to host to the signed content
+\subsection{Producer}
 
-a client needs to be able to consume DASH (dash.js) and HLS (hls.js), verify the C2PA manifests and tell the viewer the validity of the content
+The Producer must be able to create a live stream that is compliant with the DASH and HLS protocols, ideally simultaneously. In addition, it would be beneficial to be able to create live streams from various inputs, i.e. a camera, screen recording or video file to name some options.
+
+Furthermore, the Producer needs to be able to interface with the Signer to effortlessly forward the live stream for the signing process.
+
+\subsection{Signer}
+
+The Signer has to be able to receive the live stream from the Producer. Once the live stream has been received it needs to be periodically signed with a C2PA manifest. Additionally, the signing of the live stream must be optimized to the point where it effects the viewer experience as little as possible.
+
+There already is a large open-source implementation of the C2PA specifications: \texttt{c2pa-rs} \footnote{\texttt{c2pa-rs} GitHub Repository: \url{https://github.com/contentauth/c2pa-rs}} written in Rust. This implementation includes the ability to sign fragmented BMFF content and a CLI (command line interface) program. These two offer an ideal baseline for this task.
+
+Once the live stream has been signed, it needs to be made available using a Distributer.
+
+\subsection{Distributer}
+
+The Distributer should emulate a CDN (content delivery network). It needs to be able to have content ingested and then digested to viewers.
+
+\subsection{Consumer}
+
+Finally, the Consumer must be able to playback the live stream from the CDN using DASH and HLS conform players. A website is the ideal candidate for this. It offers a robust environment to create graphical user interfaces, it is very portable and a very common platform to consume media on.
+
+In addition, there are existing implementations for the media players, like \texttt{dash.js} \footnote{\texttt{dash.js} GitHub Repository: \url{https://github.com/Dash-Industry-Forum/dash.js}} and \texttt{hls.js} \footnote{\texttt{hls.js} GitHub Repository: \url{https://github.com/video-dev/hls.js}} for the DASH and HLS protocols, respectively. Likewise there is an existing implementation for validating C2PA manifests in a wide range of content types: \texttt{c2pa} \footnote{\texttt{c2pa} NPM package: \url{https://www.npmjs.com/package/c2pa}}.

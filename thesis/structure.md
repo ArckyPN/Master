@@ -30,11 +30,13 @@
     - Signing Optimization (8 Segments per Merkle Tree) [see](/thesis/notes.md)
     - BMFF Hashing (Box Position added before each Box)
     - CDN caching (ReplayStream crate + DELETE from FFmpeg (extra) window size)
+    - Producer Inputs and their Specifics (e.g. WebCam stuff, external camera [Sony Program...], etc.)
   - GUI (examples images, probably best to keep this above in the Design section)
   - Documentation (helper shell scripts, install instructions?)
 - Evaluation
   - Performance Original Impl vs. New Live
   - Latency Impact
+  - Data Transmission (Uploading to / Downloading from CDN)
   - Alternative approaches where to put the manifests (in Segments like currently, on separate Server or in the MPD/Playlist)
 - Conclusion
   - Summary

@@ -1,31 +1,90 @@
 \chapter{Design\label{cha:chapter4}}
 
-overview of the testbed with the four components, copy the diagram from the abstract
+In this chapter I will detail the design of the implemented testbed shown in \Cref{fig:testbed}. 
 
 \section{Producer\label{sec:producer}}
 
-explain to use a video file to simulate a live stream using FFmpeg, producing DASH and HLS simultaneously
+The Producer is a highly configurable Rust program capable of reading special settings files with which a FFmpeg \footnote{FFmpeg Homepage: \url{https://www.ffmpeg.org/}} command is generated. FFmpeg is a powerful command line tool for audio and video production.
 
-bash script that
-    - run rust script to parse settings \Cref{sec:settings}
-    - an FFmpeg bash script file (example in appendix)
-    - run ffmpeg script
+The generation process starts with the parsing of the CLI, specifics follow in \Cref{sec:cli_producer}, followed by the reading of the settings files, according to \Cref{sec:settings}. Using the parameters gathered from the CLI and settings files the Producer generates a shell scripts. The Producer supports a plethora of input types. Of which the most important ones are local video files and video devices. Other options are remote video sources, standard input pipe of the FFmpeg process, and screen captures.
+
+When a local video file is configured as the input, the FFmpeg command will create a live stream by endlessly looping through the video. Video devices usually represent the built-in laptop webcam but it is also possible to plug in an external camera via USB and use that as input, the setup process is described in the following \Cref{sec:ext_cam}. Remote video sources can be anything supported by FFmpeg which can be addressed using an URL to receive over the internet, for example remote provided DASH/HLS live streams or VoDs (videos on demand) or IP-cameras.
+
+Once the Producer has finished generating the FFmpeg shell script, the script can executed in a terminal to run the live stream creation. The FFmpeg command will create and a live stream using the FFmpeg output format "dash" and point the output to an HTTP server. The "dash" output format also has an option to create HLS master and media playlist files alongside the DASH stream. 
+
+An example shell scripts is shown and described in \todo[inline]{add script in appendix and Cref it}.
+
+\subsection{Command Line Interface\label{sec:cli_producer}}
+
+\todo[inline]{do this closer to the end when in case anything changes until then}
+
+\subsection{Settings Files\label{sec:settings}}
+
+The settings files are two CSV-files, one for audio and video each. These files can either be created by hand, configured to suit the desired requirements and given using the CLI or they can be automatically generated. When automatically generated they provide a range of default settings as well as show the expected format, as seen in \Cref{list:audio} for audio and video in \Cref{list:video} (both formatted for better readability). Both files can be configured by add or removing lines with the desired settings and adding a '\texttt{\#}' in front of a line signals the Producer to ignore that line.
+
+\begin{figure}
+    \centering
+    \begin{lstlisting}
+           name,sampling,bitrate
+        default,   48000, 128000
+    \end{lstlisting}
+    \caption{Default Audio Settings File}
+    \label{list:audio}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \begin{lstlisting}
+          name,resolution, bitrate,max_rate,buffer_size
+         #144p,   256x144,   95000,  100000,     150000
+         #240p,   426x240,  150000,  160000,     240000
+         #360p,   640x360,  276000,  290000,     430000
+         #480p,   854x480,  750000,  775000,    1200000
+          720p,  1280x720, 2048000, 2200000,    3300000
+        #1080p, 1920x1080, 4096000, 4300000,    6500000
+        #1440p, 2560x1440, 6144000, 6500000,   10000000
+        #2160p, 3840x2160,17408000,18000000,   27000000
+    \end{lstlisting}
+    \caption{Default Video Settings File}
+    \label{list:video}
+\end{figure}
 
 \section{Signer\label{sec:signer}}
 
-c2patool extension of HTTP server to receive FFmpeg output
+The Signer is an extension of existing \texttt{c2patool} command line program. It has been extended by an additional subcommand to launch the added live signer, alongside the implementation of an for live streaming optimized signing process. The live subcommand turns the \texttt{c2patool} into an HTTP server. The Signer will then receive the live stream from FFmpeg via HTTP requests. With every new segment received the stream will be signed, details of the signing and the optimizations are detailed in \Cref{sec:optimization}. Finally, the finished files are then sent to the Distributer.
 
-optimization steps => Merkle Tree problem (DVR window, retransmission, etc.)
+\subsection{Command Line Interface\label{sec:cli_signer}}
+
+\todo[inline]{do this closer to the end when in case anything changes until then}
 
 \section{Content Delivery\label{sec:cdn}}
 
-cdn needs to relay content as quickly as possible
+The finished live stream is hosted on a CDN. A CDN is an HTTP server which can receive data and then distribute it using HTTP requests. The live stream is sent by the Signer and then finally requested by the video players of the Consumer.
 
-replay channel crate
+\todo[inline]{pretty short, put caching details here instead of next chapter?}
+
+\subsection{Command Line Interface\label{sec:cli_cdn}}
+
+\todo[inline]{do this closer to the end when in case anything changes until then}
 
 \section{Consumer\label{sec:consumer}}
 
-client needs to be able to consume DASH (dash.js) and HLS (hls.js), verify the C2PA manifests and tell the viewer the validity of the content
+The Consumer is a website built using the Svelte \footnote{Svelte Homepage: \url{https://svelte.dev/}} framework. The website consists of four major parts: Controls, Player, Manifest and Merkle Tree visualization.
 
-svelte, dash.js, hls.js, c2pa verifier (WASM of c2pa-rs)
+\todo[inline]{add screenshot of page, with a complete Merkle Tree}
 
+\todo[inline]{need to update this with the planned additions of the two new approaches}
+The \textbf{Controls} are two buttons which are pre-configured to easily play the signed live stream using \texttt{dash.js} and \texttt{hls.js} and set of another button and URL text input to be able to play a video any other source. In this case the website will determine which player to use based to the given URL, specifically the file extension:
+
+\begin{itemize}
+    \item "mpd" for \texttt{dash.js}
+    \item "m3u8" for \texttt{hls.js}
+\end{itemize}
+
+The next component is the \textbf{Player} and this is a basic HTML5 video element. This video element is used by the players to play the live stream. Both players have also been extended using their public event callback APIs to validate the requested media segments using the aforementioned \texttt{c2pa} JavaScript package.
+
+The \textbf{Manifest visualization} is third component and is used to display a a few selected parts of the C2PA manifest found in the live stream being played. Shown information are the title of the manifest, the issuer of the certificate used to sign the manifest and the assertions: whether it is a fragmented BMFF format, the author of the manifest and all actions applied to the live stream. Finally, I have also used this space to display the current validation status of all segments by showing the number of valid, invalid and total segments.
+
+The final component is the \textbf{Merkle Tree visualization} and it dynamically creates SVG images of the current state of the Merkle Tree in form of a binary tree. It shows the initialization segment, the Merkle Tree and a legend for the colors used. The initialization segment display contains information of the Merkle Tree referenced by the most recent segment: the current number of leaves, the unique and local ID, its hash and the reference Merkle Tree hash. The Merkle Tree display shows the reconstructed Merkle Tree based on the current segment. The leaves (the segments) list their own data hash and the proof hashes needed for validation. The current segment is marked by a cyan border. Its proof hashes are colored in orange, in the segment itself and also in the corresponding node in Merkle Tree. The reference Merkle Tree hashes from the initialization segment, in this testbed the root node, are colored in magenta. Finally, these colors and their meaning are documented in the legend.
+
+\todo[inline]{add another image of just the Merkle Tree, use one with an unfinished tree}

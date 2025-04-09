@@ -16,6 +16,8 @@
 \usepackage{todonotes}
 \usepackage{cleveref}
 \usepackage{tikz}
+\usepackage[chapter]{algorithm}
+\usepackage{algpseudocode}
 
 \usetikzlibrary{shapes.geometric, arrows}
 
@@ -58,11 +60,13 @@
     \tableofcontents
     \thispagestyle{empty}
     
-    \todo[inline]{talk to your supervisor if this is needed}
     \listoffigures
     \thispagestyle{empty}
     
     \listoftables
+    \thispagestyle{empty}
+
+    \listofalgorithms
     \thispagestyle{empty}
     
 % --------------------------------------------------------------
@@ -84,7 +88,7 @@
 		
 		% if you want to provide a glossary with explanations of important terms put it in here
 
-    \bibliographystyle{geralpha}
+    \bibliographystyle{ieeetr}
     \bibliography{./bib/manual}
     
     \input{./misc/annex}

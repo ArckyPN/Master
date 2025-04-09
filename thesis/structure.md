@@ -14,7 +14,7 @@
     - Fragmented BMFF Manifest structure
     - Merkle Trees
     - BMFF Hashing
-  - Concurrent Approaches (DRM?)
+  - Concurrent Approaches (DRM, Fingerprinting, Watermarking?)
 - Requirements (What do I need? Rust, HTTP Server, FFmpeg, Website, DASH, HLS, etc.)
 - Design (of the testbed, the four components / include CLI)
   - Producer (Rust script to create FFmpeg command)

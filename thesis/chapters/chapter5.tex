@@ -1,35 +1,134 @@
 \chapter{Implementation\label{cha:chapter5}}
 
-
+This chapter details the testbed implementation. It provides insight into the code of the Producer, Signer, Distributer and Consumer components. 
 
 \section{Environment\label{sec:env}}
 
-table of the various laptops used (work, UltraMachine and private) and software used
 
 \section{Project Structure\label{sec:projectstructure}}
 
-folder structure with brief descriptions of what are, c2pa-rs, producer, cdn, consumer, etc.
+The project structure of the testbed is split into seven subdirectories:
+
+\subsection{cdn}
+
+The \textbf{cdn} folder is a standard Rust project and holds the source code of the Distributer component.
+
+\subsection{consumer}
+
+The \textbf{consumer} folder is a SvelteKit application project and contains the client-side code and markup files of the Consumer component.
+
+\subsection{scripts}
+
+The \textbf{scripts} folder contains helper shell scripts to easily run the testbed using pre-configured settings for all components.
+
+\subsection{c2pa-rs}
+
+The \textbf{c2pa-rs} directory is a \texttt{git} submodule of the \texttt{c2pa-rs} repository fork. It contains the optimized signing code as well as the modified \texttt{c2patool} program.
+
+\subsection{producer}
+
+The \textbf{producer} directory is also a \texttt{git} submodule. It provides the \texttt{FFmpeg} command generator. I included it as a submodule because I am using this tool for other projects as well.
+
+\todo[inline]{add mpd + m3u8 submodules}
 
 \section{Important Implementation Aspects\label{sec:implaspects}}
 
-important parts of the project and challenges
+Over the course of the implementation of this testbed I came across a number of challenges and noteworthy aspects. This section will go over these.
 
 \subsection{Signing Optimization\label{sec:optimization}}
 
+The first and most important task of this thesis was the modification of the C2PA signing process to tailor it to the live streaming procedure.
+
+The big problem of the previously existing signing implementation was that it was made to only sign VoD content. In other works the provided media stream was assumed to be a completed set and that it would no longer change. However, a live stream periodically adds new media segments to the set and using this implementation with every newly created segment one would have needed to sign everything all over again.
+
+I did exactly that as a preliminary test and it did work. However, after just a few minutes the signing started to take so long that the client-side validation would stop working, because the C2PA manifest wasn't updated in a timely manner.
+
+To provide the option to sign live stream I added a public method to the C2PA \texttt{Builder} structure which has the same signature as the function to sign fragmented BMFF content, see \Cref{code:fragment_bmff}, with one addition: a parameters to configure the number of leaves of the individual Merkle Tree, more on that later. The new function signature is shown in \Cref{code:live_sign}.
+
+The \texttt{signer} is part of all signing function and is responsible for various tasks related to the digital signature. The \texttt{asset\_path} is the path to the initialization fragment file. The \texttt{fragment\_paths} is a list of paths pointing to all fragments that are part of the live stream set, which need to be included in the C2PA manifest. This list grows by one element with every new fragment created. The \texttt{output\_path} is the path to initialization fragment output file. This is where the signed initialization file and all fragments will be saved to during the signing process. The \texttt{window\_size} is the aforementioned number of leaves of each Merkle Tree. 
+
+\begin{figure}
+    \begin{lstlisting}[language=Rust]
+        pub fn sign_fragmented_files<P: AsRef<std::path::Path>>(
+            &mut self,
+            signer: &dyn crate::Signer,
+            assert_path: P,
+            fragment_paths: &Vec<std::path::PathBuf>,
+            output_path: P,
+        ) -> crate::error::Result<()> { ... }
+    \end{lstlisting}
+    \caption{Original Signing Function}
+    \label{code:fragment_bmff}
+\end{figure}
+
+\begin{figure}
+    \begin{lstlisting}[language=Rust]
+        pub fn sign_live_bmff<P: AsRef<std::path::Path>>(
+            &mut self,
+            signer: &dyn crate::Signer,
+            assert_path: P,
+            fragment_paths: &Vec<std::path::PathBuf>,
+            output_path: P,
+            window_size: usize, // number of leaves
+        ) -> crate::error::Result<()> { ... }
+    \end{lstlisting}
+    \caption{New Live Signing Function}
+    \label{code:live_sign}
+\end{figure}
+
+The first change I had to make in this function was to ensure it doesn't return an error when the given \texttt{output\_path} already exists. The output will always be populated after the first time this function is called, because the signing builds on top of the previous results rather than starting all over again with every new segment. Another minor addition was the inclusion of the file extension "m4s" to be part of the BMFF C2PA signing. This file type is typically used in the MPEG-DASH protocol.
+
+The remaining signing process is integrated into the existing procedure using \texttt{window\_size} to differentiate between new and old.
+
+The next changes are part of the \texttt{c2pa::Store::start\_save\_bmff\_fragmented} method. Originally in this function a new empty Merkle Tree was initialized. However, it is imperative to re-use the Merkle Trees from the already signed live stream. This is done by attempting to use the C2PA \texttt{Reader} to parse the output file (the signed initialization segment) to extract the C2PA manifest. From the manifest I try to find the assertion with the label "\texttt{c2pa.hash.bmff.v2}", which contains the Merkle Tree and is implemented as the \texttt{BmffHash} Rust structure. When any of these steps fail, which should only be the case the first time a live stream is signed, when there is no output yet, then it will default to the original behavior of initializing a new Merkle Tree.
+
+With the Merkle Tree now accessible the next step is to update it with the newly added segment using the \texttt{BmffHash::add\_merkle\_for\_fragmented} method. This method expects the asset path, the output path, the fragment paths to add and the unique and local ID. When the configured \texttt{window\_size} was \texttt{0} then these parameters are as they worked previously. Otherwise the paths to all fragments of this live stream are split into groups with each group being \texttt{window\_size} big, the final group can be smaller. The number of groups will be local ID of this Merkle Tree and the final group is part of this Merkle Tree which needs to be updated. All previous groups are assumed to be already properly signed and are left untouched.
+
+The Merkle Tree updating is the next big change. In the original code the number of proofs was hard-coded to be always \texttt{4}. I have updated this to be always the number which corresponds to the reference Merkle Tree node to be the root of the Merkle Tree:
+
+\begin{equation}
+    \#proofs = \left\lceil \log_2({\#leaves}) \right\rceil
+    \label{eq:proofs}
+\end{equation}
+
+Then I updated the part where the fragment paths are converted to \texttt{PathBuf} types and copied to the destination. If the output destination already exist then I use that path from here on instead and skip the copying, otherwise I keep the original path and copy the files to the output (this happens only for the newest fragment). Similarly, I will only copy over the asset file when it doesn't already exist at the destination.
+
+During the placeholder Merkle Tree creation I have removed the restriction that this process can only work for asset files which don't already have an embedded C2PA manifest and instead of always inserting the placeholder, I added the branch to replace the C2PA \texttt{uuid} box in files with an existing C2PA manifest. At the end of this function the Merkle Tree originally would have been set on the assertion as a single element of the Merkle Tree list. However, this is now only done when the assertion didn't already have a Merkle Tree list and when it did have one I check if the new Merkle Tree exists on that list. I do this by iterating over all list elements and check if the local and unique IDs match. When I find a match I replace that entry with the new Merkle Tree. If no match is found, this Merkle Tree is new and simply needs to be appended to the list.
+
+The final modification is the process of updating the data hash of the initialization file. This happens in the function \texttt{BmffHash::update\_fragmented\_inithash} and the change is simply update this hash on all the Merkle Trees instead of just the first one.
+
+\subsubsection{Reading the \texttt{c2pa.hash.bmff.v2} Assertion}
+
+Reading the "\texttt{c2pa.hash.bmff.v2}" assertion proved to be a spiteful challenge. Initially, when I was done with the implementation and wanted to test it out, I would always get the result that none of the segments would correctly validate with trustworthy C2PA manifests.
+
+The culprit ended up being the definition of the \texttt{BmffHash}. It uses the popular Rust crate \texttt{serde} (from \textbf{Ser}ialize and \textbf{De}serialize) to define how the structure is converted to and from binary data and in this definition the data field signifying the version is being ignored from the conversion. This resulted that when deserializing this assertion from the previously signed output the version would always be left uninitialized on the structure. This inturn had the effect that the required version 2 would no be used for all the data hashing, resulting the erroneous validations.
+
+I overcame this challenge by making the existing method \texttt{BmffHash::set\_bmff\_version} public and manually setting the version to \texttt{2} after the assertion had been extracted.
+
+\subsection{Minimizing Re-transmissions of duplicate Data}
+
+The first reason behind the optimization described in the previous section was of cause the time reduction of limiting the number of fragments that need to be signed to a fixed value. However, the second reason is the reduction of transmission overhead. Whenever a fragment is signed, that has already been previously signed, that fragment has to be published anew to the CDN. This is highly problematic because the fragment itself has not actually, only the C2PA manifest has changed, so the majority of the transmission is redundant. By only signing a small part of the live stream that number of redundant transmissions is already cut down by a large portion.
+
+This aspect is also the driving thought behind the two alternative approaches implemented in this testbed.
+
+By decoupling the C2PA manifests from the fragment entirely, it is possible to simply forward the fragments without alterations to the CDN and allow the CDN to perform its standard procedure caching and at the same time completely eliminate the redundant transmissions of the media data.
+
+\subsection{CDN Caching}
+
+The Distributer is simple HTTP server built with the \texttt{Rocket}\footnote{Rocket GitHub: \url{https://github.com/rwf2/Rocket}} Rust crate. The media distribution is handled by two endpoints: "\texttt{/ingest/uri...}" and "\texttt{/digest/...}". The ingest endpoint is used by the Signer to post the live stream after signing. The digest endpoint is used by the media players on the Consumer to get the published live stream.
+
+To keep the forwarding delay to a minimum the most recent fragments are kept in memory of the Distributer as part of a proxy cache. This cache consists of two components a \texttt{DashMap} and a \texttt{ReplayChannel}. The \texttt{DashMap} is provided by the \texttt{dashmap}\footnote{dashmap GitHub: \url{https://github.com/xacrimon/dashmap}} Rust crate and is essentially a standard Rust \texttt{HashMap} that has been highly optimized for concurrency. The \texttt{ReplayChannel} is taken from the \texttt{replay-channel}\footnote{replay-channel GitHub: \url{https://github.com/freenet/replay-channel}} and works just like normal broadcast data channel in Rust with the added caveat that subscribers to that channel will always receive all data starting at the beginning of the channel. With this cache the CDN is able to write fragments to the cache, identified by their URIs, as they arrive. Then when the Consumer requests a new fragment, the CDN can check if the requested URI is cached. If it is cached I can subscribe to the corresponding channel and send the data as response. When a fragment wasn't cached the CDN will instead read the fragment from local storage.
+
+I make use of the \texttt{FFmpeg} arguments \texttt{-window\_size <num>} and \texttt{-extra\_window\_size <num>} to prevent the cache from caching unnecessarily many fragments and stop it growing too much. The window size argument denotes the number of fragments kept in the DASH manifest and HLS media playlist. The extra window size option defines the number of fragment in addition to window size are kept saved on the disk. Since I am using an HTTP output, instead of directly deleting the fragments, FFmpeg will instead from HTTP delete requests for the corresponding fragment. The Signer forwards these deletes to the CDN where the corresponding fragments are removed from the cache.
+
 \subsection{Producer Inputs\label{sec:producer_inputs}}
 
-\subsubsection{External Camera\label{sec:ext_cam}}
+> possible inputs + Sony program stuff and the Linux workaround
 
-\section{Graphical User Interface\label{sec:gui}}
+\subsection{TLS Certificates}
 
-examples of how the website in action looks
+\todo[inline]{mention anything about the difficulty of getting compatible certificates?}
 
 \section{Documentation\label{sec:docu}}
 
 introduce the shell scripts to easily run the testbed, install instructions as well?
-
-\section{Challenges}
-
-Merkle Tree? optimizing signing?
-
-

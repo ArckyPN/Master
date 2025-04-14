@@ -53,6 +53,8 @@ The settings files are two CSV-files, one for audio and video each. These files 
 
 The Signer is an extension of existing \texttt{c2patool} command line program. It has been extended by an additional subcommand to launch the added live signer, alongside the implementation of an for live streaming optimized signing process. The live subcommand turns the \texttt{c2patool} into an HTTP server. The Signer will then receive the live stream from FFmpeg via HTTP requests. With every new segment received the stream will be signed, details of the signing and the optimizations are detailed in \Cref{sec:optimization}. Finally, the finished files are then sent to the Distributer.
 
+\todo[inline]{describe new signing here and the two alternatives}
+
 \subsection{Command Line Interface\label{sec:cli_signer}}
 
 \todo[inline]{do this closer to the end when in case anything changes until then}

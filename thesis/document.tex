@@ -24,6 +24,33 @@
 \tikzstyle{component} = [rectangle, rounded corners, minimum height=1cm, minimum width=3cm, text centered, draw=black]
 \tikzstyle{arrow} = [thick,->,>=stealth]
 
+\lstdefinelanguage{Rust}{
+  keywords={new, return, if, in, else, break, for, let, use, continue, break, mut, u8, usize, String, const, await, async, fn, pub, dyn},
+  keywordstyle=\bfseries,
+  identifierstyle=\color{black},
+  sensitive=false,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{lightgray}\ttfamily,
+  morestring=[b]',
+  morestring=[b]"
+}
+
+\lstdefinelanguage{JavaScript}{
+  keywords={typeof, new, true, false, catch, function, return, null, catch, switch, var, if, in, while, do, else, case, break, for, let, use, continue, break, mut, u8, String, const, await, async, fn},
+  keywordstyle=\color{blue}\bfseries,
+  ndkeywords={class, export, boolean, throw, implements, import, this},
+  ndkeywordstyle=\color{darkgray}\bfseries,
+  identifierstyle=\color{black},
+  sensitive=false,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{purple}\ttfamily,
+  stringstyle=\color{red}\ttfamily,
+  morestring=[b]',
+  morestring=[b]"
+}
+
 % header and footer line - no header & footer line on pages where a new chapter starts
 \pagestyle{scrheadings}
 \ohead{Design and Implementation of Content Provenance\\using C2PA Signatures in Live Streaming}

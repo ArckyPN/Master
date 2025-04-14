@@ -1,48 +1,50 @@
 # Thesis Structure
 
-- Abstract / Zusammenfassung
-- Introduction
-  - Motivation (What is C2PA used for? Why is it needed?)
-  - Object (Explore the viability or C2PA for Live Streaming)
-  - Scope (Short overview of what I will implement)
-  - Outline (Overview of the following chapters)
-- State of the Art
-  - Live Streaming (HTTP Adaptive Streaming / DASH & HLS)
-    - (anything specific I should mention about DASH / HLS?)
-  - C2PA (What is it?)
-    - In-depth overview of all the components (Claim, Manifest, Assertions, etc.)
-    - Fragmented BMFF Manifest structure
-    - Merkle Trees
-    - BMFF Hashing
-  - Concurrent Approaches (DRM, Fingerprinting, Watermarking?)
-- Requirements (What do I need? Rust, HTTP Server, FFmpeg, Website, DASH, HLS, etc.)
-- Design (of the testbed, the four components / include CLI)
-  - Producer (Rust script to create FFmpeg command)
-  - Signer (C2PA tool/library to sign Live Stream)
-  - CDN (content host / distributer)
-  - Consumer (Client website to show / verify Live Stream)
-- Implementation (Specifics about the actual implementation)
-  - Environment (Devices used for Testing / Evaluation)
-  - Important Implementation Aspects / Challenges
-    - C2PA-compliant TLS certificates
-    - Low-Latency chunked Segments
-    - Lots of re-transmissions of updated Segments
-    - Signing Optimization (8 Segments per Merkle Tree) [see](/thesis/notes.md)
-    - BMFF Hashing (Box Position added before each Box)
-    - CDN caching (ReplayStream crate + DELETE from FFmpeg (extra) window size)
-    - Producer Inputs and their Specifics (e.g. WebCam stuff, external camera [Sony Program...], etc.)
-  - GUI (examples images, probably best to keep this above in the Design section)
-  - Documentation (helper shell scripts, install instructions?)
-- Evaluation
-  - Performance Original Impl vs. New Live
-  - Latency Impact
-  - Data Transmission (Uploading to / Downloading from CDN)
-  - Alternative approaches where to put the manifests (in Segments like currently, on separate Server or in the MPD/Playlist)
-- Conclusion
-  - Summary
-  - Dissemination
-    - Alternative to Merkle Trees? Too many re-transmissions
-  - Outlook / Future Work
-    - Low-Latency support
-    - MoQ (Manifests as separate Tracks)
-    - Integration into Tools like FFmpeg / Cameras
+- [ ] Abstract / Zusammenfassung
+- [x] Introduction
+  - [ ] Motivation (What is C2PA used for? Why is it needed?)
+  - [x] Objective (Explore the viability or C2PA for Live Streaming)
+  - [x] Scope (Short overview of what I will implement)
+  - [x] Outline (Overview of the following chapters)
+- [ ] State of the Art
+  - [ ] Live Streaming (HTTP Adaptive Streaming / DASH & HLS)
+    - [ ] (anything specific I should mention about DASH / HLS?)
+  - [ ] C2PA (What is it?)
+    - [ ] In-depth overview of all the components (Claim, Manifest, Assertions, etc.)
+    - [ ] Fragmented BMFF Manifest structure
+    - [ ] BMFF Hashing
+    - [x] Merkle Trees
+    - [x] Validation
+  - [ ] Concurrent Approaches (DRM, Fingerprinting, Watermarking?)
+- [x] Requirements (What do I need? Rust, HTTP Server, FFmpeg, Website, DASH, HLS, etc.)
+- [ ] Design (of the testbed, the four components / include CLI)
+  - [ ] Producer (Rust script to create FFmpeg command)
+    - [ ] CLI
+    - [ ] Settings File
+  - [ ] Signer (C2PA tool/library to sign Live Stream)
+    - [ ] CLI
+  - [ ] CDN (content host / distributer)
+    - [ ] CLI
+  - [ ] Consumer (Client website to show / verify Live Stream)
+- [ ] Implementation (Specifics about the actual implementation)
+  - [ ] Environment (Devices used for Testing / Evaluation)
+  - [ ] Important Implementation Aspects / Challenges
+    - [x] Signing Optimization (8 Segments per Merkle Tree) [see](/thesis/notes.md#code-additions--changes)
+    - [x] Lots of re-transmissions of updated Segments
+    - [x] CDN caching (ReplayStream crate + DELETE from FFmpeg (extra) window size)
+    - [ ] Producer Inputs and their Specifics (e.g. WebCam stuff, external camera [Sony Program...], etc.)
+    - [ ] C2PA-compliant TLS certificates
+  - [ ] Documentation (helper shell scripts, install instructions?)
+- [ ] Evaluation
+  - [ ] Performance Original Impl vs. New Live (signing duration Benchmark comp)
+  - [ ] Latency Impact (signing duration is the added latency)
+  - [ ] Data Transmission (Uploading to / Downloading from CDN)
+  - [ ] Alternative approaches where to put the manifests (in Segments like currently, on separate Server or in the MPD/Playlist)
+- [ ] Conclusion
+  - [ ] Summary
+  - [ ] Dissemination
+    - [ ] Alternative to Merkle Trees? Too many re- [ ]transmissions
+  - [ ] Outlook / Future Work
+    - [ ] Low-Latency support
+    - [ ] MoQ (Manifests as separate Tracks)
+    - [ ] Integration into Tools like FFmpeg / Cameras

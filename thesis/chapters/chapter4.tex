@@ -4,15 +4,15 @@ In this chapter I will detail the design of the implemented testbed shown in \Cr
 
 \section{Producer\label{sec:producer}}
 
-The Producer is a highly configurable Rust program capable of reading special settings files with which a FFmpeg \footnote{FFmpeg Homepage: \url{https://www.ffmpeg.org/}} command is generated. FFmpeg is a powerful command line tool for audio and video production.
+The Producer is a highly configurable Rust program capable of reading special settings files with which a FFmpeg \footnote{FFmpeg Homepage: \url{https://www.ffmpeg.org/}} command is generated. FFmpeg is a powerful command line tool for audio and video processing.
 
 The generation process starts with the parsing of the CLI, specifics follow in \Cref{sec:cli_producer}, followed by the reading of the settings files, according to \Cref{sec:settings}. Using the parameters gathered from the CLI and settings files the Producer generates a shell scripts. The Producer supports a plethora of input types. Of which the most important ones are local video files and video devices. Other options are remote video sources, standard input pipe of the FFmpeg process, and screen captures.
 
-When a local video file is configured as the input, the FFmpeg command will create a live stream by endlessly looping through the video. Video devices usually represent the built-in laptop webcam but it is also possible to plug in an external camera via USB and use that as input, the setup process is described in the following \Cref{sec:ext_cam}. Remote video sources can be anything supported by FFmpeg which can be addressed using an URL to receive over the internet, for example remote provided DASH/HLS live streams or VoDs (videos on demand) or IP-cameras.
+When a local video file is configured as the input, the FFmpeg command will create a live stream by endlessly looping through the video. Video devices usually represent the built-in laptop webcam but it is also possible to plug in an external camera via USB and use that as input, the setup process is described in the following \Cref{sec:ext_cam}. Remote video sources can be anything supported by FFmpeg that can be addressed using an URL to receive over the internet, for example remotely hosted DASH/HLS live streams or VoDs (videos on demand) or IP-cameras.
 
-Once the Producer has finished generating the FFmpeg shell script, the script can executed in a terminal to run the live stream creation. The FFmpeg command will create and a live stream using the FFmpeg output format "dash" and point the output to an HTTP server. The "dash" output format also has an option to create HLS master and media playlist files alongside the DASH stream. 
+Once the Producer has finished generating the FFmpeg shell script, the script can executed in a terminal to run the live stream creation. The FFmpeg command will create the live stream using the FFmpeg output format "dash" and point the output to an HTTP server. The "dash" output format also has a convenient option to create HLS master and media playlist files alongside the DASH stream. 
 
-An example shell scripts is shown and described in \todo[inline]{add script in appendix and Cref it}.
+An example shell scripts is shown in \Cref{ex:shell}.
 
 \subsection{Command Line Interface\label{sec:cli_producer}}
 
@@ -20,7 +20,7 @@ An example shell scripts is shown and described in \todo[inline]{add script in a
 
 \subsection{Settings Files\label{sec:settings}}
 
-The settings files are two CSV-files, one for audio and video each. These files can either be created by hand, configured to suit the desired requirements and given using the CLI or they can be automatically generated. When automatically generated they provide a range of default settings as well as show the expected format, as seen in \Cref{list:audio} for audio and video in \Cref{list:video} (both formatted for better readability). Both files can be configured by add or removing lines with the desired settings and adding a '\texttt{\#}' in front of a line signals the Producer to ignore that line.
+The settings files are two CSV-files, one for audio and video each. These files are automatically generated the first time the Producer is run. The initial default configurations are shown in \Cref{list:audio} for audio and video in \Cref{list:video} (both are formatted for better readability). These files can be configured by adding new lines with desired settings or by removing lines with unwanted settings, alternatively they can also be made to be ignored by Producer by adding a '\texttt{\#}' in front of a line.
 
 \begin{figure}
     \centering
@@ -51,7 +51,7 @@ The settings files are two CSV-files, one for audio and video each. These files 
 
 \section{Signer\label{sec:signer}}
 
-The Signer is an extension of existing \texttt{c2patool} command line program. It has been extended by an additional subcommand to launch the added live signer, alongside the implementation of an for live streaming optimized signing process. The live subcommand turns the \texttt{c2patool} into an HTTP server. The Signer will then receive the live stream from FFmpeg via HTTP requests. With every new segment received the stream will be signed, details of the signing and the optimizations are detailed in \Cref{sec:optimization}. Finally, the finished files are then sent to the Distributer.
+The Signer is an extension of the existing \texttt{c2patool} command line program and the underlying \texttt{c2pa-rs} Rust crate. It has been extended by an additional subcommand to run the tool in the added live signing mode, alongside the implementation of an for live streaming optimized signing process. The live subcommand turns the \texttt{c2patool} into an HTTP server. The Signer will then receive the live stream from FFmpeg via HTTP requests. With every new segment received the stream will be signed, details of the signing and the optimizations are detailed in \Cref{sec:optimization} and the alternative approach is presented in \Cref{sec:rolling_hash}. Finally, the finished files are then sent to the Distributer.
 
 \todo[inline]{describe new signing here and the two alternatives}
 
@@ -59,9 +59,93 @@ The Signer is an extension of existing \texttt{c2patool} command line program. I
 
 \todo[inline]{do this closer to the end when in case anything changes until then}
 
+\subsection{Signing Approaches}
+
+As explained in \Cref{sec:sign_bmff} the existing fragment BMFF signing implementation is designed to be used to sign a completed set of files, i.e. a VoD. As a preliminary experiment I used this implementation to sign the created live stream in this testbed to see how it works. This approach does actually work and the fragments are all correctly validated. However, since this implementation always signs all files given to it, with every newly generated fragment the entire live stream is signed anew. This caused the signing to take longer and longer with every fragment, slowing down the machine it is running on further and further and eventually it could no longer keep up and the live stream would start to stall. Additionally, after every signing all fragments needed to published again to the CDN, which creates a lot of overhead on the network and CDN, while also not letting the CDN to effectively cache the fragments.
+
+Next, I started the implementation of optimized signing processes. I began with an optimized Merkle Tree approach as per the original proposal and the other alternatives were created in response to some of the drawbacks of the Merkle Tree approach.
+
+\subsubsection{Optimized Merkle Tree}
+
+As mentioned the big problem with the existing Merkle Tree approach was the complete re-signing of files that had already been signed during a previous signing. To fix this problem I made use of the fact that the C2PA Manifest is able to hold multiple Merkle Trees, as shown in \Cref{sec:bmff_assertion}. Each Merkle Tree has a unique and local ID and each fragment's embedded data has these IDs as well, which are used to assign a fragment the matching Merkle Tree.
+
+This approach required the addition of a new parameter on the signing function: the window size. This window size corresponds to the number of fragment each Merkle Tree will hold at most. The window size can be configured using the CLI of the Signer as depicted in \Cref{sec:cli_signer}, for the duration of this thesis I have used a window size of $8$ as default value. I chose this value for a number of reason. Firstly, since a Merkle Tree is a binary tree it is a good idea to use a power of two value to completely fill all layers of a tree. Secondly, I figured that $8$ strikes a decent balance between having enough fragments grouped together for security while not having so many fragments which would slow down the signing too much.
+
+This way only requires to sign the newest up to $8$ (or window size) fragments of the live stream. Once a full group of $8$ fragments has been signed they are done and don't need to be updated on the CDN. This approach greatly improved the performance of the live stream signing, however, it still came with a number of drawbacks:
+
+\begin{itemize}
+    \item each group of fragments adds another Merkle Tree to the BMFF Hash Assertion in the C2PA Manifest, this could result in the C2PA Manifest becoming to big if the Live Stream runs too long
+    \item each fragment still has to be updated on the CDN $8$ times
+    \item the initialization fragment still needs to be updated every time a new fragment is created
+    \item validation of every fragment requires the fetching of the newest initialization fragment to have the corresponding C2PA Manifest
+    \item a live stream could be tampered with by replacing a full group of a Merkle Tree
+\end{itemize}
+
+The two next approaches are extensions of this method and were created in response to the frequent uploading and downloading of essentially the same fragments.
+
+Technical details of this approach are described in \Cref{sec:optimization}.
+
+\subsubsection{Optimized Merkle Tree with C2PA Data on separate Server}
+
+In this approach the C2PA data added to the fragments by the signing process are stored on a separate server. First, the unsigned fragments that come in from the Producer are embedded with a "uuid" BMFF Box which contains only the URL to the C2PA data on the separate server. The fragments are then published to the CDN. These fragments never change again and this allow the CDN to work as they would in a non-C2PA scenario.
+
+Now only the C2PA data needs to be updated on the server, which are significantly smaller than the media fragments.
+
+The validation has the added steps of reading the URL in the "uuid" box in the fragments, downloading the data from that URL, replacing the "uuid" box with the downloaded data. Then the fragment can be validated as before.
+
+The big drawback of the approach is the introduction of an additional attack vector, being the extra server.
+
+Technical details and issues with this approach follow in \Cref{sec:media_playlist}.
+
+\subsubsection{Optimized Merkle Tree with C2PA Data in DASH/HLS Manifests}
+
+This approach is very similar to the previous one with the C2PA data being kept separate from the actual fragments. However, in this approach the data written in to the Manifests of the DASH and HLS protocols, specifically the MPD for DASH and the MediaPlaylist of HLS.
+
+An advantage of this is the fact that in a typical live streaming scenario it is very common that the Manifests are updated and downloaded on a per fragment-basis anyways. This way the C2PA data is essentially received for free, barring some bigger Manifests.
+
+One problem with this approach is adding the data to the Manifests. Initially, I started by forking the respective parsing crates to simply add new data fields to the Manifests, which would have no longer been conform to their respective specifications. I would have needed to the same for the client as well to read out the new data again and that started to become too complex. An alternative could be to misuse an existing field for this purpose. For DASH the EventStream (Section 5.10.2 of the DASH specifications \cite{DASH}) \todo[inline]{update the cite definition} would be an ideal option to signal the data as custom events. \todo[inline]{something similar for HLS?}
+
+Technical details and issues with this approach follow in \Cref{sec:mpd}.
+
+\subsubsection{Rolling Hash Approach}
+
+With the knowledge I gathered from the three previous approaches I came up with completely new approach which attempts to deal with as many of the numerous drawbacks of those approaches.
+
+The notable change is the replacement of the Merkle Tree with a Rolling Hash. This is done through an extension of the BMFF Hash Assertion. This extension holds most notably the Rolling Hash as well as the Anchor Point. The fragments themselves only contain the Anchor Point.
+
+This new signing function only needs the initialization fragment and the new fragment to sign. If the new fragment is the first then the C2PA Manifest embedded into the initialization fragment and the Rolling Hash is the hash of the hash of the fragment. The Anchor Point is empty. All the following fragments will use the Rolling Hash of the previous fragment as their Anchor Point (saved in the fragment and the C2PA Manifest) and create the new Rolling Hash by hashing the concatenation of the Anchor Point + hash of the fragment.
+
+The initialization fragment still needs to be updated with each fragment, however, each fragment only need sto be published once.
+
+The validation begins as before by validating the initialization fragment and the beginning of the validation of fragments depends on whether the first fragment is the first fragment of the live stream or any other fragment. 
+
+If it is the very first fragment, validation is very simple and only needs to hash the hash of the fragment and compare it with the Rolling Hash found in the C2PA Manifest of the initialization fragment. The resulting Rolling Hash can then be stored and used as Anchor Point for the next fragment: hash the next fragment and create the Rolling Hash as above through concatenation.
+
+When the first fragment was not he first fragment in the live stream, validation adds one more steps. Extracting the Anchor Point from the fragment itself and comparing it with the Anchor Point found in the C2PA Manifest. From here validation continues as above.
+
+This approach also makes use of the EventStream in the DASH MPD \todo[inline]{HLS?} to embed the Anchor Points and Rolling Hash of the C2PA Manifest from the initialization fragment. This way the client only needs to download the initialization fragment with the contained C2PA Manifest once and where there it receive the new Rolling Hash from the MPD.
+
+This approach fixes most of the problems of the other approaches:
+
+\begin{itemize}
+    \item Rolling Hash don't make the C2PA Manifest grow over time
+    \item fragment only need to be published once
+    \item validation doesn't need to download any additional data, uses data from the MPD
+    \item part of the live stream can no longer be replaced, because that would break the Rolling Hash
+    \item no additional attack vector is added
+    \item it remains DASH specification conform 
+\end{itemize}
+
+However, there still remain some drawbacks:
+
+\begin{itemize}
+    \item the initialization fragment still needs to be updated with every new fragment
+    \item fragments can only be validated if the full Rolling Hash up to the newest fragment is created
+\end{itemize}
+
 \section{Content Delivery\label{sec:cdn}}
 
-The finished live stream is hosted on a CDN. A CDN is an HTTP server which can receive data and then distribute it using HTTP requests. The live stream is sent by the Signer and then finally requested by the video players of the Consumer.
+The signed live stream is hosted on a CDN. A CDN is an HTTP server which can receive data and then distribute it using HTTP requests. The live stream is sent by the Signer and then finally requested by the video players of the Consumer.
 
 \todo[inline]{pretty short, put caching details here instead of next chapter?}
 
@@ -71,22 +155,30 @@ The finished live stream is hosted on a CDN. A CDN is an HTTP server which can r
 
 \section{Consumer\label{sec:consumer}}
 
-The Consumer is a website built using the Svelte \footnote{Svelte Homepage: \url{https://svelte.dev/}} framework. The website consists of four major parts: Controls, Player, Manifest and Merkle Tree visualization.
+The Consumer is a website built using the SvelteKit \footnote{Svelte Homepage: \url{https://svelte.dev/}} framework. The website consists of four major parts: Controls, Player, Manifest and the Visualization of either the Merkle Tree or the Rolling Hash. \Cref{fig:merkle_tree} shows and example of the visualization of a full Merkle Tree and a similar example of a Rolling Hash is shown in \Cref{fig:rolling_hash}. In the appendix there is also an example image of an incomplete Merkle Tree, see \Cref{fig:incomple_mt}.
 
 \todo[inline]{add screenshot of page, with a complete Merkle Tree}
+\begin{figure}
+    \caption{Example Merkle Tree Visualization}
+    \label{fig:merkle_tree}
+\end{figure}
+\todo[inline]{add screenshot of page, with a Rolling Hash}
+\begin{figure}
+    \caption{Example Rolling Hash Visualization}
+    \label{fig:rolling_hash}
+\end{figure}
 
 \todo[inline]{need to update this with the planned additions of the two new approaches}
-The \textbf{Controls} are two buttons which are pre-configured to easily play the signed live stream using \texttt{dash.js} and \texttt{hls.js} and set of another button and URL text input to be able to play a video any other source. In this case the website will determine which player to use based to the given URL, specifically the file extension:
+The \textbf{Controls} are two buttons which are pre-configured to easily play the signed live stream using \texttt{dash.js} and \texttt{hls.js} and a set of another button and URL text input to be able to play a video any other source. In this case the website will determine which player to use based to the given URL, specifically the file extension:
 
 \begin{itemize}
     \item "mpd" for \texttt{dash.js}
     \item "m3u8" for \texttt{hls.js}
 \end{itemize}
 
-The next component is the \textbf{Player} and this is a basic HTML5 video element. This video element is used by the players to play the live stream. Both players have also been extended using their public event callback APIs to validate the requested media segments using the aforementioned \texttt{c2pa} JavaScript package.
+The next component is the \textbf{Player} and this is a standard HTML5 video element. This video element is used by the players to play the live stream. Both players have also been extended using their public event callback APIs to validate the requested media segments using the aforementioned \texttt{c2pa} JavaScript package.
 
-The \textbf{Manifest visualization} is third component and is used to display a a few selected parts of the C2PA manifest found in the live stream being played. Shown information are the title of the manifest, the issuer of the certificate used to sign the manifest and the assertions: whether it is a fragmented BMFF format, the author of the manifest and all actions applied to the live stream. Finally, I have also used this space to display the current validation status of all segments by showing the number of valid, invalid and total segments.
+The \textbf{Manifest} visualization is third component and is used to display a few selected parts of the C2PA manifest found in the live stream being played. Shown information are the title of the manifest, the issuer of the certificate used to sign the manifest and the assertions: whether it is a fragmented BMFF format, the author of the manifest and all actions applied to the live stream. Finally, I have also used this space to display the current validation status of all segments by showing the number of valid, invalid and total segments. In case a fragment is determined to be invalid it will also display the reason why the fragment was invalid.
 
-The final component is the \textbf{Merkle Tree visualization} and it dynamically creates SVG images of the current state of the Merkle Tree in form of a binary tree. It shows the initialization segment, the Merkle Tree and a legend for the colors used. The initialization segment display contains information of the Merkle Tree referenced by the most recent segment: the current number of leaves, the unique and local ID, its hash and the reference Merkle Tree hash. The Merkle Tree display shows the reconstructed Merkle Tree based on the current segment. The leaves (the segments) list their own data hash and the proof hashes needed for validation. The current segment is marked by a cyan border. Its proof hashes are colored in orange, in the segment itself and also in the corresponding node in Merkle Tree. The reference Merkle Tree hashes from the initialization segment, in this testbed the root node, are colored in magenta. Finally, these colors and their meaning are documented in the legend.
-
-\todo[inline]{add another image of just the Merkle Tree, use one with an unfinished tree}
+\todo[inline]{update this properly for Merkle / Rolling once I have images to better reference them}
+The final component is the \textbf{Visualization} of the Merkle Tree and Rolling Hash and it dynamically creates SVG images of the current state of the Merkle Tree in form of a binary tree or Rolling Hash as snaking chain of individual hashes. It shows the initialization segment, the Merkle Tree or Rolling Hash chain and a legend for the colors used. The initialization segment display contains information of the Merkle Tree referenced by the most recent segment: the current number of leaves, the unique and local ID, its hash and the reference Merkle Tree hash. The Merkle Tree display shows the reconstructed Merkle Tree based on the current segment In case of the Rolling Hash the initialization segment displays its hash and the Rolling Hash and Anchor Point. The leaves (the segments) list their own data hash and the proof hashes needed for validation. The current segment is marked by a cyan border. Its proof hashes are colored in orange, in the segment itself and also in the corresponding node in Merkle Tree. The reference Merkle Tree hashes from the initialization segment, in this testbed the root node, are colored in magenta. Finally, these colors and their meaning are documented in the legend.

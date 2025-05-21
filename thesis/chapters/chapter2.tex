@@ -39,7 +39,7 @@ quick history of C2PA then going over the important parts of the spec in detail:
 
 \subsubsection{Assertions}
 
-\subsection{BMFF Hash Assertion}
+\subsection{BMFF Hash Assertion\label{sec:bmff_assertion}}
 
 The BMFF Hash Assertion (label: \texttt{c2pa.hash.bmff}) is the C2PA Data Hash \footnote{Data Hash \url{https://c2pa.org/specifications/specifications/2.0/specs/C2PA_Specification.html\#_data_hash}} Assertion embedded in fragmented BMFF media files and is required in these files for validation. This Assertion is encapsulated by the Rust data structure \texttt{BmffHash}, see \Cref{code:bmff_hash}. It contains the exclusion ranges used to create the data hashes of the fragmented files (struct field \texttt{exclusions}), the name of hashing algorithm used (struct field \texttt{alg}), the data hash, as byte buffer, of the corresponding file (struct field \texttt{hash} / this field is not used for BMFF media which is split into multiple files, this use case of the thesis), the Merkle Trees (struct field \texttt{merkle}) and the BMFF hashing version used (struct field \texttt{bmff\_version}).
 
@@ -217,6 +217,10 @@ The validation of a fragment requires the successful validation of the accompany
     \caption{Validating a Fragment}
     \label{alg:validate}
 \end{algorithm}
+
+\subsection{Signing Fragmented BMFF Files\label{sec:sign_bmff}}
+
+\todo[inline]{explain the existing signing}
 
 \section{Concurrent Approaches}
 

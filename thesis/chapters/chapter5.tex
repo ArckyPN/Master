@@ -101,6 +101,14 @@ The culprit ended up being the definition of the \texttt{BmffHash}. It uses the 
 
 I overcame this challenge by making the existing method \texttt{BmffHash::set\_bmff\_version} public and manually setting the version to \texttt{2} after the assertion had been extracted.
 
+\subsection{C2PA Data in DASH MPD\label{sec:mpd}}
+
+\todo[inline]{segment timeline, custom field, not spec conform, playback problems, base64}
+
+\subsection{C2PA Data in HLS MediaPlaylist\label{sec:media_playlist}}
+
+\todo[inline]{custom field difficult, not spec conform}
+
 \subsection{Minimizing Re-transmissions of duplicate Data}
 
 The first reason behind the optimization described in the previous section was of cause the time reduction of limiting the number of fragments that need to be signed to a fixed value. However, the second reason is the reduction of transmission overhead. Whenever a fragment is signed, that has already been previously signed, that fragment has to be published anew to the CDN. This is highly problematic because the fragment itself has not actually, only the C2PA manifest has changed, so the majority of the transmission is redundant. By only signing a small part of the live stream that number of redundant transmissions is already cut down by a large portion.
@@ -120,6 +128,8 @@ I make use of the \texttt{FFmpeg} arguments \texttt{-window\_size <num>} and \te
 \subsection{Producer Inputs\label{sec:producer_inputs}}
 
 > possible inputs + Sony program stuff and the Linux workaround
+
+\subsubsection{External Camera\label{sec:ext_cam}}
 
 \subsection{TLS Certificates}
 

@@ -47,34 +47,30 @@ To provide the option to sign live stream I added a public method to the C2PA \t
 
 The \texttt{signer} is part of all signing function and is responsible for various tasks related to the digital signature. The \texttt{asset\_path} is the path to the initialization fragment file. The \texttt{fragment\_paths} is a list of paths pointing to all fragments that are part of the live stream set, which need to be included in the C2PA manifest. This list grows by one element with every new fragment created. The \texttt{output\_path} is the path to initialization fragment output file. This is where the signed initialization file and all fragments will be saved to during the signing process. The \texttt{window\_size} is the aforementioned number of leaves of each Merkle Tree. 
 
-\begin{figure}
-    \begin{lstlisting}[language=Rust]
-        pub fn sign_fragmented_files<P: AsRef<std::path::Path>>(
-            &mut self,
-            signer: &dyn crate::Signer,
-            assert_path: P,
-            fragment_paths: &Vec<std::path::PathBuf>,
-            output_path: P,
-        ) -> crate::error::Result<()> { ... }
-    \end{lstlisting}
-    \caption{Original Signing Function}
-    \label{code:fragment_bmff}
-\end{figure}
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={Original Signing Function}, label=code:fragment_bmff, language=Rust, captionpos=b]
+    pub fn sign_fragmented_files<P: AsRef<std::path::Path>>(
+        &mut self,
+        signer: &dyn crate::Signer,
+        assert_path: P,
+        fragment_paths: &Vec<std::path::PathBuf>,
+        output_path: P,
+    ) -> crate::error::Result<()> { ... }
+\end{lstlisting}
+\end{minipage}
 
-\begin{figure}
-    \begin{lstlisting}[language=Rust]
-        pub fn sign_live_bmff<P: AsRef<std::path::Path>>(
-            &mut self,
-            signer: &dyn crate::Signer,
-            assert_path: P,
-            fragment_paths: &Vec<std::path::PathBuf>,
-            output_path: P,
-            window_size: usize, // number of leaves
-        ) -> crate::error::Result<()> { ... }
-    \end{lstlisting}
-    \caption{New Live Signing Function}
-    \label{code:live_sign}
-\end{figure}
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={New Live Signing Function}, label=code:live_sign, language=Rust, captionpos=b]
+    pub fn sign_live_bmff<P: AsRef<std::path::Path>>(
+        &mut self,
+        signer: &dyn crate::Signer,
+        assert_path: P,
+        fragment_paths: &Vec<std::path::PathBuf>,
+        output_path: P,
+        window_size: usize, // number of leaves
+    ) -> crate::error::Result<()> { ... }
+\end{lstlisting}
+\end{minipage}
 
 The first change I had to make in this function was to ensure it doesn't return an error when the given \texttt{output\_path} already exists. The output will always be populated after the first time this function is called, because the signing builds on top of the previous results rather than starting all over again with every new segment. Another minor addition was the inclusion of the file extension "m4s" to be part of the BMFF C2PA signing. This file type is typically used in the MPEG-DASH protocol.
 

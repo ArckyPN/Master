@@ -53,13 +53,11 @@ The settings files are two CSV-files, one for audio and video each. These files 
 
 The Signer is an extension of the existing \texttt{c2patool} command line program and the underlying \texttt{c2pa-rs} Rust crate. It has been extended by an additional subcommand to run the tool in the added live signing mode, alongside the implementation of an for live streaming optimized signing process. The live subcommand turns the \texttt{c2patool} into an HTTP server. The Signer will then receive the live stream from FFmpeg via HTTP requests. With every new segment received the stream will be signed, details of the signing and the optimizations are detailed in \Cref{sec:optimization} and the alternative approach is presented in \Cref{sec:rolling_hash}. Finally, the finished files are then sent to the Distributer.
 
-\todo[inline]{describe new signing here and the two alternatives}
-
 \subsection{Command Line Interface\label{sec:cli_signer}}
 
 \todo[inline]{do this closer to the end when in case anything changes until then}
 
-\subsection{Signing Approaches}
+\subsection{Signing Approaches\label{sec:rolling_hash}}
 
 As explained in \Cref{sec:sign_bmff} the existing fragment BMFF signing implementation is designed to be used to sign a completed set of files, i.e. a VoD. As a preliminary experiment I used this implementation to sign the created live stream in this testbed to see how it works. This approach does actually work and the fragments are all correctly validated. However, since this implementation always signs all files given to it, with every newly generated fragment the entire live stream is signed anew. This caused the signing to take longer and longer with every fragment, slowing down the machine it is running on further and further and eventually it could no longer keep up and the live stream would start to stall. Additionally, after every signing all fragments needed to published again to the CDN, which creates a lot of overhead on the network and CDN, while also not letting the CDN to effectively cache the fragments.
 
@@ -147,7 +145,7 @@ However, there still remain some drawbacks:
 
 The signed live stream is hosted on a CDN. A CDN is an HTTP server which can receive data and then distribute it using HTTP requests. The live stream is sent by the Signer and then finally requested by the video players of the Consumer.
 
-\todo[inline]{pretty short, put caching details here instead of next chapter?}
+The CDN caches all new files in memory to ensure that they can be provided as fast as possible. The files are cleared from the cache when FFmpeg signals their removal. The technical details follow in \Cref{sec:caching}.
 
 \subsection{Command Line Interface\label{sec:cli_cdn}}
 
@@ -168,17 +166,19 @@ The Consumer is a website built using the SvelteKit \footnote{Svelte Homepage: \
     \label{fig:rolling_hash}
 \end{figure}
 
-\todo[inline]{need to update this with the planned additions of the two new approaches}
-The \textbf{Controls} are two buttons which are pre-configured to easily play the signed live stream using \texttt{dash.js} and \texttt{hls.js} and a set of another button and URL text input to be able to play a video any other source. In this case the website will determine which player to use based to the given URL, specifically the file extension:
+The \textbf{Controls} can be separated into two parts. 
+
+The first being two buttons and a drop down selector for convenience. The buttons are pre-configured play the signed live streaming generated in this testbed using either \texttt{dash.js} or \texttt{hls.js}. The drop down selector allows the choosing which of the live streams to watch: the unsigned original, the Merkle Tree approach or the Rolling Hash method.
+
+The second part is an URL text input to use any other live stream and a button to start the live stream using that URL. In this case the website will determine which player to use based to the given URL, specifically using the file extension:
 
 \begin{itemize}
     \item "mpd" for \texttt{dash.js}
     \item "m3u8" for \texttt{hls.js}
 \end{itemize}
 
-The next component is the \textbf{Player} and this is a standard HTML5 video element. This video element is used by the players to play the live stream. Both players have also been extended using their public event callback APIs to validate the requested media segments using the aforementioned \texttt{c2pa} JavaScript package.
+The next component is the \textbf{Player} and this is a standard HTML5 video element. This video element is used by the players to play the live stream. Both players have also been extended using their public event callback APIs to validate the requested media segments using the aforementioned \texttt{c2pa} JavaScript package. For the Rolling Hash validation, the \texttt{c2pa} has been extended with an API to verify those fragments. Details on this implementation follow in \Cref{sec:wasm}.
 
 The \textbf{Manifest} visualization is third component and is used to display a few selected parts of the C2PA manifest found in the live stream being played. Shown information are the title of the manifest, the issuer of the certificate used to sign the manifest and the assertions: whether it is a fragmented BMFF format, the author of the manifest and all actions applied to the live stream. Finally, I have also used this space to display the current validation status of all segments by showing the number of valid, invalid and total segments. In case a fragment is determined to be invalid it will also display the reason why the fragment was invalid.
 
-\todo[inline]{update this properly for Merkle / Rolling once I have images to better reference them}
 The final component is the \textbf{Visualization} of the Merkle Tree and Rolling Hash and it dynamically creates SVG images of the current state of the Merkle Tree in form of a binary tree or Rolling Hash as snaking chain of individual hashes. It shows the initialization segment, the Merkle Tree or Rolling Hash chain and a legend for the colors used. The initialization segment display contains information of the Merkle Tree referenced by the most recent segment: the current number of leaves, the unique and local ID, its hash and the reference Merkle Tree hash. The Merkle Tree display shows the reconstructed Merkle Tree based on the current segment In case of the Rolling Hash the initialization segment displays its hash and the Rolling Hash and Anchor Point. The leaves (the segments) list their own data hash and the proof hashes needed for validation. The current segment is marked by a cyan border. Its proof hashes are colored in orange, in the segment itself and also in the corresponding node in Merkle Tree. The reference Merkle Tree hashes from the initialization segment, in this testbed the root node, are colored in magenta. Finally, these colors and their meaning are documented in the legend.

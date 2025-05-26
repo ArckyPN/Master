@@ -109,6 +109,8 @@ I overcame this challenge by making the existing method \texttt{BmffHash::set\_b
 
 \todo[inline]{custom field difficult, not spec conform}
 
+\subsection{Extending the Client C2PA Package\label{sec:wasm}}
+
 \subsection{Minimizing Re-transmissions of duplicate Data}
 
 The first reason behind the optimization described in the previous section was of cause the time reduction of limiting the number of fragments that need to be signed to a fixed value. However, the second reason is the reduction of transmission overhead. Whenever a fragment is signed, that has already been previously signed, that fragment has to be published anew to the CDN. This is highly problematic because the fragment itself has not actually, only the C2PA manifest has changed, so the majority of the transmission is redundant. By only signing a small part of the live stream that number of redundant transmissions is already cut down by a large portion.
@@ -117,7 +119,7 @@ This aspect is also the driving thought behind the two alternative approaches im
 
 By decoupling the C2PA manifests from the fragment entirely, it is possible to simply forward the fragments without alterations to the CDN and allow the CDN to perform its standard procedure caching and at the same time completely eliminate the redundant transmissions of the media data.
 
-\subsection{CDN Caching}
+\subsection{CDN Caching\label{sec:caching}}
 
 The Distributer is simple HTTP server built with the \texttt{Rocket}\footnote{Rocket GitHub: \url{https://github.com/rwf2/Rocket}} Rust crate. The media distribution is handled by two endpoints: "\texttt{/ingest/uri...}" and "\texttt{/digest/...}". The ingest endpoint is used by the Signer to post the live stream after signing. The digest endpoint is used by the media players on the Consumer to get the published live stream.
 

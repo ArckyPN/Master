@@ -81,7 +81,17 @@ This way only requires to sign the newest up to \texttt{8} (or window size) frag
 
 The two next approaches are extensions of this method and were created in response to the frequent uploading and downloading of essentially the same fragments.
 
-Technical details of this approach are described in \Cref{sec:optimization}.
+Technical details of this approach are described in \Cref{sec:merkle_opt}.
+
+\subsubsection{Optimized Merkle Tree with C2PA Data in DASH/HLS Manifests}
+
+This approach is very similar to the previous one with the C2PA data being kept separate from the actual fragments. However, in this approach the data written in to the Manifests of the DASH and HLS protocols, specifically the MPD for DASH and the MediaPlaylist of HLS.
+
+An advantage of this is the fact that in a typical live streaming scenario it is very common that the Manifests are updated and downloaded on a per fragment-basis anyways. This way the C2PA data is essentially received for free, barring some bigger Manifests.
+
+One problem with this approach is adding the data to the Manifests. Initially, I started by forking the respective parsing crates to simply add new data fields to the Manifests, which would have no longer been conform to their respective specifications. I would have needed to the same for the client as well to read out the new data again and that started to become too complex. An alternative could be to misuse an existing field for this purpose. For DASH the EventStream (Section 5.10.2 of the DASH specifications \cite{DASH}) \todo[inline]{update the cite definition} would be an ideal option to signal the data as custom events. \todo[inline]{something similar for HLS?}
+
+Technical details and issues with this approach follow in \Cref{sec:in_manifest}.
 
 \subsubsection{Optimized Merkle Tree with C2PA Data on separate Server}
 
@@ -93,17 +103,7 @@ The validation has the added steps of reading the URL in the "uuid" box in the f
 
 The big drawback of the approach is the introduction of an additional attack vector, being the extra server.
 
-Technical details and issues with this approach follow in \Cref{sec:media_playlist}.
-
-\subsubsection{Optimized Merkle Tree with C2PA Data in DASH/HLS Manifests}
-
-This approach is very similar to the previous one with the C2PA data being kept separate from the actual fragments. However, in this approach the data written in to the Manifests of the DASH and HLS protocols, specifically the MPD for DASH and the MediaPlaylist of HLS.
-
-An advantage of this is the fact that in a typical live streaming scenario it is very common that the Manifests are updated and downloaded on a per fragment-basis anyways. This way the C2PA data is essentially received for free, barring some bigger Manifests.
-
-One problem with this approach is adding the data to the Manifests. Initially, I started by forking the respective parsing crates to simply add new data fields to the Manifests, which would have no longer been conform to their respective specifications. I would have needed to the same for the client as well to read out the new data again and that started to become too complex. An alternative could be to misuse an existing field for this purpose. For DASH the EventStream (Section 5.10.2 of the DASH specifications \cite{DASH}) \todo[inline]{update the cite definition} would be an ideal option to signal the data as custom events. \todo[inline]{something similar for HLS?}
-
-Technical details and issues with this approach follow in \Cref{sec:mpd}.
+Technical details and issues with this approach follow in \Cref{sec:on_server}.
 
 \subsubsection{Rolling Hash Approach}
 

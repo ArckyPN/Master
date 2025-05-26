@@ -1,35 +1,29 @@
 \chapter{Implementation\label{cha:chapter5}}
 
-This chapter details the testbed implementation. It provides insight into the code of the Producer, Signer, Distributer and Consumer components. 
+This chapter details the testbed implementation. It provides insight into the code of the Producer, Signer, Distributer and Consumer components, as well as the challenges I came across.
 
 \section{Environment\label{sec:env}}
 
+The following hardware and software was used during the development process:
 
-\section{Project Structure\label{sec:projectstructure}}
-
-The project structure of the testbed is split into seven subdirectories:
-
-\subsection{cdn}
-
-The \textbf{cdn} folder is a standard Rust project and holds the source code of the Distributer component.
-
-\subsection{consumer}
-
-The \textbf{consumer} folder is a SvelteKit application project and contains the client-side code and markup files of the Consumer component.
-
-\subsection{scripts}
-
-The \textbf{scripts} folder contains helper shell scripts to easily run the testbed using pre-configured settings for all components.
-
-\subsection{c2pa-rs}
-
-The \textbf{c2pa-rs} directory is a \texttt{git} submodule of the \texttt{c2pa-rs} repository fork. It contains the optimized signing code as well as the modified \texttt{c2patool} program.
-
-\subsection{producer}
-
-The \textbf{producer} directory is also a \texttt{git} submodule. It provides the \texttt{FFmpeg} command generator. I included it as a submodule because I am using this tool for other projects as well.
-
-\todo[inline]{add mpd + m3u8 submodules}
+\begin{table}[H]
+    \begin{tabular}{l|cll|}
+    \cline{2-4}
+                                                    & \multicolumn{1}{l|}{\textbf{Work Laptop 1}}                                               & \multicolumn{1}{l|}{\textbf{Work Laptop 2}} & \textbf{Private Laptop}                                        \\ \hline
+    \multicolumn{1}{|l|}{\textbf{Vendor}}           & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}Lenovo ThinkPad \\ L14 Gen 4\end{tabular}} & \multicolumn{1}{l|}{}                       & \begin{tabular}[c]{@{}l@{}}Framework \\ Laptop 13\end{tabular} \\ \hline
+    \multicolumn{1}{|l|}{\textbf{Operating System}} & \multicolumn{1}{l|}{Ubuntu 24.04.1 LTS}                                                   & \multicolumn{1}{l|}{}                       & Ubuntu 24.04.2 LTS                                             \\ \hline
+    \multicolumn{1}{|l|}{\textbf{CPU}}              & \multicolumn{1}{l|}{Intel i7 1355U}                                                       & \multicolumn{1}{l|}{}                       & Intel i5 1340p                                                 \\ \hline
+    \multicolumn{1}{|l|}{\textbf{RAM}}              & \multicolumn{1}{l|}{32 GB}                                                                & \multicolumn{1}{l|}{}                       & 32 GB                                                          \\ \hline
+    \multicolumn{1}{|l|}{\textbf{Browser}}          & \multicolumn{3}{c|}{Google Chrome 119 / Mozilla Firefox 138}                                                                                                                                             \\ \hline
+    \multicolumn{1}{|l|}{\textbf{Code Editor}}      & \multicolumn{3}{c|}{Visual Studio Code}                                                                                                                                                                  \\ \hline
+    \multicolumn{1}{|l|}{\textbf{Rust}}             & \multicolumn{3}{c|}{Version 1.86.0}                                                                                                                                                                      \\ \hline
+    \multicolumn{1}{|l|}{\textbf{Node.js}}          & \multicolumn{3}{c|}{Version 22.15.0}                                                                                                                                                                     \\ \hline
+    \multicolumn{1}{|l|}{\textbf{Svelte}}           & \multicolumn{3}{c|}{Version 4.2.7}                                                                                                                                                                       \\ \hline
+    \multicolumn{1}{|l|}{\textbf{FFmpeg}}           & \multicolumn{3}{c|}{Version 6.1.1-3ubuntu5}                                                                                                                                                              \\ \hline
+    \end{tabular}
+    \caption{Hardware and Software Environment}
+    \label{tab:env}
+\end{table}
 
 \section{Important Implementation Aspects\label{sec:implaspects}}
 

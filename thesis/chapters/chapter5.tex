@@ -8,7 +8,7 @@ The following hardware and software was used during the development process:
 
 \begin{table}[H]
     \begin{tabular}{l|cll|}
-    \cline{2-4}
+        \cline{2-4}
                                                                                                    & \multicolumn{1}{l|}{\textbf{Work Laptop 1}}                                               & \multicolumn{1}{l|}{\textbf{Work Laptop 2}}                                              & \textbf{Private Laptop}                                        \\ \hline
         \multicolumn{1}{|l|}{\textbf{Vendor}}                                                      & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}Lenovo ThinkPad \\ L14 Gen 4\end{tabular}} & \multicolumn{1}{l|}{\begin{tabular}[c]{@{}l@{}}Lenovo ThinkPad \\ P1 Gen 7\end{tabular}} & \begin{tabular}[c]{@{}l@{}}Framework \\ Laptop 13\end{tabular} \\ \hline
         \multicolumn{1}{|l|}{\textbf{\begin{tabular}[c]{@{}l@{}}Operating \\ System\end{tabular}}} & \multicolumn{1}{l|}{Ubuntu 24.04.1 LTS}                                                   & \multicolumn{1}{l|}{Ubuntu 24.04 LTS}                                                    & Ubuntu 24.04.2 LTS                                             \\ \hline
@@ -20,7 +20,7 @@ The following hardware and software was used during the development process:
         \multicolumn{1}{|l|}{\textbf{Node.js}}                                                     & \multicolumn{3}{c|}{Version 22.15.0}                                                                                                                                                                                                                  \\ \hline
         \multicolumn{1}{|l|}{\textbf{Svelte}}                                                      & \multicolumn{3}{c|}{Version 4.2.7}                                                                                                                                                                                                                    \\ \hline
         \multicolumn{1}{|l|}{\textbf{FFmpeg}}                                                      & \multicolumn{3}{c|}{Version 6.1.1-3ubuntu5}                                                                                                                                                                                                           \\ \hline
-    \end{tabular}
+        \end{tabular}
     \caption{Hardware and Software Environment}
     \label{tab:env}
 \end{table}
@@ -94,11 +94,11 @@ The final modification is the process of updating the data hash of the initializ
 
 This approach left the media fragments themselves untouched and forwards them directly to the CDN. However, the DASH and HLS manifests receive modifications before being sent to the CDN. The modifications happened after the signing process. The C2PA was extracted from fragments and written into the manifests.
 
-My initial idea to realize this was to add a new proprietary data field into both manifests which would hold the C2PA data. To do this, I forked the repositories of both Rust implementations: \texttt{dash-mpd-rs} \footnote{GitHub Repository \url{https://github.com/emarsden/dash-mpd-rs}} and \texttt{m3u8-rs} \footnote{GitHub Repository \url{https://github.com/rutgersc/m3u8-rs}}. Additionally, I have change the FFmpeg script generator to make it create a script that is creating a live streaming with a segment timeline instead of a template to have explicit references to the specific segments, which made the following steps considerably easier.
+My initial idea to realize this was to add a new proprietary data field into both manifests which would hold the C2PA data. To do this, I forked the repositories of both Rust implementations: \texttt{dash-mpd-rs} \footnote{GitHub Repository: \url{https://github.com/emarsden/dash-mpd-rs}} and \texttt{m3u8-rs} \footnote{GitHub Repository: \url{https://github.com/rutgersc/m3u8-rs}}. Additionally, I have change the FFmpeg script generator to make it create a script that is creating a live streaming with a segment timeline instead of a template to have explicit references to the specific segments, which made the following steps considerably easier.
 
 In the case of the DASH MPD I have then added a "c2pa" data field of type \texttt{String} to the data structures \texttt{Initialization} and \texttt{S} (Segment). Since this implementation uses the \texttt{serde} crate for serialization of the data, this was all I had to do. Additionally, on the client \texttt{dash.js} seemed to use a generic XML parsing, since the newly added fields showed up without requiring any changes.
 
-Similarly to DASH, I started by adding a "c2pa" data of type \texttt{String} to the \texttt{MediaSegment} and the \texttt{Map} (Initialization segment) data structures. However, this implementation does not use \texttt{serde}, instead it uses \texttt{nom} \footnote{GitHub Repository \url{https://github.com/rust-bakery/nom}}, which is crate that can be used to build arbitrary data parsers. This required manually adding the parsing of these new fields into the process. Furthermore, the \texttt{hls.js} player has similarly implemented their own m3u8 parsing, which would have required adding the same parsing to this code base as well.
+Similarly to DASH, I started by adding a "c2pa" data of type \texttt{String} to the \texttt{MediaSegment} and the \texttt{Map} (Initialization segment) data structures. However, this implementation does not use \texttt{serde}, instead it uses \texttt{nom} \footnote{GitHub Repository: \url{https://github.com/rust-bakery/nom}}, which is crate that can be used to build arbitrary data parsers. This required manually adding the parsing of these new fields into the process. Furthermore, the \texttt{hls.js} player has similarly implemented their own m3u8 parsing, which would have required adding the same parsing to this code base as well.
 
 However, at this point I had notice that the switch to segment timeline and the whole manifest manipulations lead to both players refusing the playback of the live stream anyways without any error messages whatsoever. Since debugging these players went beyond the scope of this thesis I abandoned this approach at this point. 
 

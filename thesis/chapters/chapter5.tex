@@ -120,7 +120,38 @@ For simplicity I use the CDN server for this as well.
 
 \subsection{Extending the Client C2PA Package\label{sec:wasm}}
 
-\todo[inline]{wasm stuff, node version, etc.}
+The client \texttt{c2pa} library is part of of the \texttt{c2pa-js} \footnote{GitHub Repository: \url{https://github.com/contentauth/c2pa-js}} suite of JavaScript packages. This library leverages WebAssembly \footnote{WASM mdn web docs: \url{https://developer.mozilla.org/en-US/docs/WebAssembly}} (WASM) to use the Rust library in a web browser. WASM is browser API that allows running other languages (than JavaScript), like C/C++, C$\#$ and Rust, in the browser with near to native performance of the original code. With WASM it is possible to port the \texttt{c2pa-rs} code into the browser with very little additional work, otherwise the library would have needed to be completely rewritten in JavaScript.
+
+This repository uses \texttt{rush} \footnote{rush Homepage: \url{https://rushjs.io/}} to manage the packages. The only issue I had with this, was the very peculiar Node.js version requirement \footnote{Rush Node.js version specification: \url{https://github.com/ArckyPN/c2pa-js/blob/main/rush.json\#L127}}, see the footnote for specifics. Getting around this requirement was very simple using the Node Version Manager \texttt{nvm}. I chose to use the highest allowed version supported by this configuration, version 18. Every time I needed to do anything that involved \texttt{rush}, namely building the packages to test the changes I made and also committing the changes to the git repository, I had to switch node version 18. Using \texttt{nvm} this is as simple as running \texttt{nvm install 18} or \texttt{nvm use 18} once the version has been installed.
+
+The first step was replacing the \texttt{c2pa} npm dependency from the official, remotely hosted version to the version I have forked. This was a very simple task, as it only required a simple change in the \texttt{package.json}: changing the associated value of the \texttt{"c2pa"} entry of the \texttt{"dependencies"} object from the original version denotation \texttt{"0.18.0-fmp4-alpha.1"} to the path to the local clone of the forked repository \texttt{"file:../c2pa-js/packages/c2pa"}.
+
+Since I forked the most recent edition of the repository and not the branch that contains the alternative version which includes the fragmented BMFF validation, the next step was bringing this validation into the version. There was a very big version difference between the two versions and in the meantime the \texttt{c2pa-rs} Rust library had moved to the v2 API and deprecated the original API, which the fragmented BMFF version happened to still be using. This required to firstly update the Rust part of this library to the new API. After that I could simply copy the remaining code changes from the alternative version into the forked version. This proved to be a very good approach because while going through the changes, I learnt how the WASM integration works and by the time I brought the fragmented BMFF validation back, I knew what to do to add the Rolling Hash validation.
+
+The first half of change had to be done in TypeScript and began with adding the Rolling Hash validation as a new function definition to the \texttt{C2PA} interface:
+
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[caption={New Rolling Hash Validation Function}, label=code:rh_validate, language=JavaScript, captionpos=b]
+    export interface C2pa {
+        ...
+        readRollingHash(
+            fragment: ArrayBuffer,
+            rollingHash: Uint8Array,
+            anchorPoint?: Uint8Array,
+            options?: C2paReadOptions,
+        ): Promise<Uint8Array>;
+        ...
+    }
+\end{lstlisting}
+\end{minipage}
+
+This function validates a fragment, given as data buffer, using the Rolling Hash and an optional Anchor Point. The Rolling Hash is the result expected by hashing the fragment and the Anchor Point. This hash is retrieved from the DASH MPD or the C2PA Manifest from the initialization fragment. The Anchor Point is optional, because the very first fragment doesn't have one and when joining the live stream not from the very beginning, the Anchor Point may not be known. When no Anchor Point is given, the validator will attempt to read the Anchor Point from the "uuid" BMFF Box of the fragment. Finally, on success this function will return the Rolling Hash result, this hash will be the Anchor Point of the next fragment validation. When the validation was not successful, this function will throw an error, necessitating wrapping this function in a \texttt{try/catch} block.
+
+The next step was actually implementing the defined function by adding it to the \texttt{createC2pa} function. This function called a newly added Worker Pool function specific to Rolling Hash validation, which inturn also required a new function on Worker. This final Worker function is calling the actual function that is executing the WASM Rust code. All these changes were very straightforward and analogue to the other already existing validation functions.
+
+The second half the changes needed to be done in Rust code. They started out with adding the TypeScript function prototypes to the provided string definition. Then I could implement the function that gets bound by WASM to be callable from JavaScript. This was again essentially the same for the other functions with the only difference being calling a Rolling Hash specific validation function. This function calls the actual \texttt{c2pa-rs} validation function I implemented for Rolling Hash validation.
+
+The final step after the implementation was building the changes into usable packages using \texttt{rush} by running \texttt{rush build} in a terminal. Once this command had run its course, the code changes were ready to use.
 
 \subsection{Reading the \texttt{c2pa.hash.bmff.v2} Assertion}
 
@@ -140,9 +171,41 @@ I make use of the \texttt{FFmpeg} arguments \texttt{-window\_size <num>} and \te
 
 \subsection{Producer Inputs\label{sec:producer_inputs}}
 
-> possible inputs + Sony program stuff and the Linux workaround
+The Producer is capable of accepting a variety of input types. The input can be configured using the CLI arguments as shown in \Cref{sec:cli_producer}.
+
+\subsubsection{Remote}
+
+Remote inputs can be anything that is addressable using an IP-compliant address. Examples for this are URLs pointing to server hosted DASH MPDs or HLS Playlists which denote VoDs or live streaming, IP-cameras like the Android app DroidCam \footnote{DroidCam Homepage: \url{https://droidcam.app/}}, which turns your smartphone into a camera or anything else that is supported as input by \texttt{FFmpeg}.
+
+\subsubsection{Local}
+
+Video files are the local input type. They can be either used as a static input to created a limited time stream or they can be used a infinite loop to create a endless live stream.
+
+\subsubsection{Standard Input}
+
+This input options expects raw images on the standard input pipe, which turn these images into a video stream. In this use case \texttt{FFmpeg} expects a definition of the image resolution to properly interpret the received data. This type was needed by a different project where the images were created a the Unity Game Engine\footnote{Unity Homepage: \url{https://unity.com/}} and then used to create a live stream for a remote rendering scenario.
+
+\subsubsection{Device}
+
+On linux video devices are addressed using a path, for example contents of the \texttt{/dev/} directory, and they can also be used as an input. For example on a laptop with an integrated webcam that webcam is usually the device \texttt{/dev/video0}.
+
+When using this input I had to use the tool \texttt{video4linux2} to extract metadata about the device, like supported formats, resolutions and framerates which are required by \texttt{FFmpeg} to properly parse the input data.
 
 \subsubsection{External Camera\label{sec:ext_cam}}
+
+This method uses the same \textbf{Device} input as detailed in the previous section but since getting this to work required more work, I am giving it its own section.
+
+For this thesis I was provided with a Sony Alpha 7 III, so these steps apply only to this specific camera (every vendor likely has different implementations of getting this working).
+
+Normally, Sony provides the software tool Imaging Edge Webcam \footnote{Imaging Edge Webcam Product Page: \url{https://support.d-imaging.sony.co.jp/app/webcam/en/}}. Unfortunately, this program is only supported on Windows and macOS operating systems, as described on the download page, and I am using a Linux operating system. However, I was able to find a Reddit thread which had a comment which details a workaround to get an alternative working \footnote{Reddit Sony Imaging Edge Webcam in Ubuntu: \url{https://www.reddit.com/r/Ubuntu/comments/s4zjo7/comment/kwsoxzm/}}.
+
+This approach uses the tool \texttt{gphoto2} \footnote{gPhoto Homepage: \url{http://gphoto.org/}}, an open source application to digital cameras and media players on Unix-like systems. The first step is installing the required tools \texttt{gphoto2}, \texttt{video4linux2 loopback-utils} and \texttt{FFmpeg} by running \texttt{sudo apt install gphoto2 v4l2loopback-utils ffmpeg}, followed by plugging in the camera using a USB cable. If the file system automatically mounts the camera, it is important to unmount it. \todo[inline]{IMPORTANT: select that specific option! check what it was named!!!} The next step is creating a new video device using the video feed from the camera. Before the device can be crated it is important to be able to determine which device is being crated by this process: first make sure no other loopback service is running by stopping the service using the command \texttt{sudo rmmod v4l2loopback}. Next determine the currently available video devices by remembering the list given by \texttt{ls /dev/video*}. Now start the loopback service using the camera's video feed with the command \texttt{sudo modprobe v4l2loopback exclusive\_caps=1 max\_buffers=2} to create the new video device. The designation of this device can be determined by listing the available video device again (with the same command as before). Whatever device that is now on this list that wasn't there before is the device that was created by this process. Whether this process has worked can be verified by running \texttt{gphoto2 --auto-detect}. If the process was successful the terminal should now display the camera model name and the port it is connected to. Finally, the last step is actually piping the video feed from the camera to the video device by running the final command \texttt{photo2 --stdout --capture-movie | ffmpeg -i - -vcodec rawvideo -pix\_fmt yuv420p -threads 0 -f v4l2 <video device>}. 
+
+Once this command is running the camera feed is now accessible from the specified video device.
+
+I have automated this process in the helper shell script. I split this process up into two additional shell scripts in the Producer repository: setup and run-capture. The setup encompasses everything after the dependency installation up until the final piping command. It stops the possibly running loopback services, reads the currently running video devices and keeps them in memory, then is starts the loopback service, reads the available devices again, then it filters out all video devices that are new in the second reading. Finally, when multiple new devices have found it prompts the use to choose which device to use. Otherwise it will automatically use the one device found. The determined video device path will be printed to the standard output. The run-capture script expects the video capture device path argument and will simply run the final piping command.
+
+The automation starts by calling the setup script and saving the returned video device to a variable. Then it starts the run-capture script in a separate terminal using \texttt{gnome-terminal -- ./run-capture \$VIDEO\_DEVICE}. Finally, I am waiting five seconds to make sure that the video device is saturated. \todo[inline]{check if this might be the cause for the poor latency, maybe it starts at the beginnig???}
 
 \subsection{TLS Certificates}
 

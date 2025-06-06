@@ -121,7 +121,7 @@ If it is the very first fragment, validation is very simple and only needs to ha
 
 When the first fragment was not he first fragment in the live stream, validation adds one more steps. Extracting the Anchor Point from the fragment itself and comparing it with the Anchor Point found in the C2PA Manifest. From here validation continues as above.
 
-This approach also makes use of the EventStream in the DASH MPD \todo[inline]{HLS?} to embed the Anchor Points and Rolling Hash of the C2PA Manifest from the initialization fragment. This way the client only needs to download the initialization fragment with the contained C2PA Manifest once and where there it receive the new Rolling Hash from the MPD.
+This approach also makes use of the EventStream in the DASH MPD to embed the Anchor Points and Rolling Hash of the C2PA Manifest from the initialization fragment. This way the client only needs to download the initialization fragment with the contained C2PA Manifest once and where there it receive the new Rolling Hash from the MPD.
 
 This approach fixes most of the problems of the other approaches:
 

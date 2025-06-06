@@ -1,43 +1,52 @@
 \chapter{State of the Art\label{cha:chapter2}}
 
-\section{HTTP Live Streaming\label{sec:live}}
+\section{HTTP Adaptive Streaming\label{sec:live}}
 
-\todo[inline]{reference dash and hls from Bachelor}
-% TODO re-do this, more detailed
-For more than 15 years HTTP adaptive streaming (HAS) has been the defacto standard media streaming protocol. Media that is streamed this way is transcoded into a number of different tracks. For video these tracks usually represent different qualities, for example bitrate and resolution, audio can also have different qualities levels but also different languages. These tracks are then separated into small chunks, usually a few seconds of length.
+For more than 15 years HTTP adaptive streaming (HAS) has been the defacto standard media streaming protocol with the release of HTTP live streaming (HLS) \footnote{HLS for Developer: \url{https://developer.apple.com/streaming/}} in 2009 \cite{rfc8216} and subsequently in 2012 \footnote{DASH First ISO Standard: \url{https://www.iso.org/standard/57623.html}} with the release Dynamic adaptive streaming over HTTP (DASH).
 
-Each stream has a manifest which acts as the primary entry point. It contains general metadata about the stream as well as the available track options, including the request URIs, bitrate, resolution, sampling rate, frame per second, language and more data about the tracks.
+In both of the protocols a media stream is split into a number of different representations, each being a transcode of the original stream with different quality levels or in case of audio and subtitles they can also represent different languages. Each of these representations inturn has its media stream split into small chunks. These chunks enable the media players to dynamically switch the currently playing representations to adapt to the current situation, they also enable separation of the acquisition of the stream into many individual HTTP requests instead of downloading the entire stream in one go.
 
-A typical process begins with the player requesting the manifest. The player then uses the information found in the manifest to decide on which tracks to use first. Then it requests media segments and plays them back. In the meantime a player runs adaptive bitrate (ABR) algorithms to decide whether or not to change the track. An ABR algorithm can take many different aspects into consideration, like current download rate, buffer size, available qualities, segment length, etc. 
+Both of these protocols make use of a manifest to give the media player all relevant information to acquire the media stream. In case of DASH this manifest is the Media Presentation Description (MPD). It uses the file ending \texttt{.mpd}. This MPD is an XML \cite{rfc5364} file which contains every detail about one specific media stream. In contrast to this approach, HLS splits this information into one Master Playlist and separate Media Playlists. These files use the file ending \texttt{.m3u8}. They are encoded as plain text UTF-8 \cite{rfc3629} files with a proprietary method of encoding the contained information. The Master Playlist contains information about the individual representations, as well the references to the Media Playlists each of which corresponds one specific representation. 
 
-\todo[inline]{initialization segment definition}
-
-% TODO specific subsection for dash and hls is overkill, only real difference is MPD vs M3U8 Playlist (and dash.js vs hls.js I guess)
-
-\subsection{DASH\label{sub:dash}}
-
-going over the specifics of DASH
-
-\subsection{HLS\label{sub:hls}}
-
-going over the specifics of HLS
-
-\subsection{Content Provenance\label{sec:conpro}}
+The MPD and Master Playlist act as the entry points of their respective media stream and are used to initialize a media player to play that stream. The players download these files and use the contained information to play the media stream. While the media is playing the players analyze the current streaming situation and based on a number of parameters, like network conditions, buffer level, playing quality, available qualities, etc. use an adaptive bitrate (ABR) algorithm whether or not to switch to a different quality to ensure smooth playback.
 
 \section{C2PA\label{c2pa}}
 
-The C2PA technical specifications are currently on version 2.2 \footnote{C2PA Technical Specification v2.2: \url{https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html}}, however, when I started this thesis the C2PA implementation this work is based on was still on version 2.0, thus I will be referencing version 2.0 for everything related to the technical specifications \footnote{C2PA Technical Specification v2.0: \url{https://c2pa.org/specifications/specifications/2.0/specs/C2PA_Specification.html}}.
+As previously mentioned the goal of C2PA is the creation of a tamper-proof method of embedding metadata into media. This metadata is supposed to contain all information relevant in the creation of said media as well as all the editing steps applied to it. Ultimately, this data encodes the provenance of media to provide transparency, knowledge and the trust in it.
 
-\todo[inline]{How to reference the C2PA spec for this entire section?}
-quick history of C2PA then going over the important parts of the spec in detail: Claim, Manifest, Content Types, etc.
+The technical specifications of C2PA detail the motivations, goals and methodologies. These specifications are currently on version 2.2 \footnote{C2PA Technical Specification v2.2: \url{https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html}}, however, when I started this thesis the C2PA implementation this work is based on was still on version 2.0, thus I will be referencing version 2.0 for everything related to the technical specifications \footnote{C2PA Technical Specification v2.0: \url{https://c2pa.org/specifications/specifications/2.0/specs/C2PA_Specification.html}}. Everything in this section is referenced to this technical specification unless denoted otherwise.
 
-\subsection{Manifest}
+Here I give an example of what an ideally integrated lifecycle of media content would look like. A photographer takes an image using a camera. This camera has integrated C2PA capabilities and would embed C2PA metadata into the image. This metadata would contain information like the location where the image was taken, model name of the camera, camera settings, like ISO values, zoom level, used to take the image, EXIF data, credentials of the photographer who took the image, automatic processing steps applied by the camera and possibly any additional data the camera was configured to include. The photographer then takes this image to an editor who further edits this image with software. This program is also integrated with C2PA capabilities and would extended the already embedded C2PA metadata with information about the editing process. This additional data could included information about color corrections, lighting changes, cropping, removal and addition of objects, application of filters, credentials from the editor and any other image manipulations applied to the image. The image is now ready for publication. It is uploaded to social media and these services often apply modifications to media during upload, like compression to make them more portable, conversion to a different data type or other steps. These are naturally also C2PA integrated and they further extend the C2PA metadata by including the processing formation, service that applied the changes and so on. The image is now viewable by everyone on the respective platforms. The websites and programs displaying this image are integrated with C2PA validation tools and verify that the image hasn't been tampered with by validating the C2PA metadata. They then indicate that the image is trustworthy and also provide the option for users to look at the metadata.
 
-\subsubsection{Claim Signature}
+\subsection{Assertion}
 
-\subsubsection{Claim}
+An \texttt{Assertion} encapsulates a piece of information about the media asset. It is created during the signing process. Assertions are an integral part of the C2PA Manifest. Each Assertion is identified by an unique label. There are predefined labels and Assertion data but it is also possible to include any type of proprietary data as Assertion. 
 
-\subsubsection{Assertions}
+An example of a predefined Assertion follows in \Cref{sec:bmff_assertion}.
+
+\subsection{Claim}
+
+The \texttt{Claim} reference all Assertions of the C2PA Manifest they are contained in. It is digitally signed and tamper-proof. The Claim is also an integral part of the C2PA Manifest.
+
+\subsection{Claim Signature}
+
+The \texttt{Claim Signature} is the final part of the C2PA Manifest and it it is the digital signature of the Claim.
+
+\subsection{C2PA Manifest}
+
+The \texttt{C2PA Manifest} (or just Manifest) contains the three aforementioned parts: the Claim Signature, the Claim and the Assertions. Each Manifest contains one Claim Signature, one Claim and a set of Assertions. They are contained in the Manifest Store of an media asset.
+
+\subsection{Manifest Store}
+
+The C2PA metadata is wrapped in the \texttt{Manifest Store}. A Manifest Store contains all C2PA Manifests. The last of these Manifests is the so called Active Manifests, which is the most recently added Manifests and it contains the credentials that are verifiable. The Manifest Store can be either directly embedded into the media asset or it can be referenced in the asset as external.
+
+An example of how a Manifest Store can look like can be seen in \Cref{fig:manifest_store}.
+
+\begin{figure}[H]
+    \todo[inline]{image with these components visualized}
+    \caption{Example Manifest Store}
+    \label{fig:manifest_store}
+\end{figure}
 
 \subsection{BMFF Hash Assertion\label{sec:bmff_assertion}}
 
@@ -45,7 +54,7 @@ The BMFF Hash Assertion (label: \texttt{c2pa.hash.bmff}) is the C2PA Data Hash \
 
 The Merkle Trees are described by an array of the Rust data structure \texttt{MerkleMap}, see \Cref{code:merkle_map}. Each Merkle Tree contains its unique ID (struct field \texttt{unique\_id}), its local ID (struct field \texttt{local\_id}), the number of leaves in this tree (struct field \texttt{count}), the name of the hashing algorithm used (struct field \texttt{alg}), the data hash of the initialization fragment, as byte buffer and the layer of the Merkle Tree stored for reference, more on that later, as array of byte buffer (struct field \texttt{hashes}).
 
-\begin{minipage}{\linewidth}
+\begin{minipage}{0.95\linewidth}
 \begin{lstlisting}[caption={BmffHash Rust Definition}, label=code:bmff_hash, language=Rust, captionpos=b]
     pub struct BmmfHash {
         // the exclusion ranges
@@ -66,7 +75,7 @@ The Merkle Trees are described by an array of the Rust data structure \texttt{Me
 \end{lstlisting}
 \end{minipage}
 
-\begin{minipage}{\linewidth}
+\begin{minipage}{0.95\linewidth}
 \begin{lstlisting}[caption={MerkleMap Rust Definition}, label=code:merkle_map, language=Rust, captionpos=b]
     pub struct MerkleMap {
         // unique ID
@@ -85,33 +94,38 @@ The Merkle Trees are described by an array of the Rust data structure \texttt{Me
 \end{lstlisting}
 \end{minipage}
 
-\subsubsection{Hashing}
+\subsubsection{BMFF-Based Hashing}
 
-\todo[inline]{explain the hashing specifics + ExclusionMap struct} % https://github.com/contentauth/c2pa-rs/blob/main/sdk/src/assertions/bmff_hash.rs#L50
-% this is more complicated than I expected, don't sure if I'll want to describe this in detail, maybe towards the end if the thesis could use more text
+The hashing of BMFF-based data has certain requirements set by the specifications that need to be followed. All the data of a BMFF file must be included in the hashing data, except specific parts as defined by the \texttt{ExclusionMap} list. These exclusions are included in the corresponding Assertion, \texttt{BmffHash} in this case, as mention in the preceding section.
 
-\begin{minipage}{\linewidth}
+The data structure of an exclusion is details in \Cref{code:exclusion_map}. It contains one mandatory field \texttt{xpath}, which describes the path to the corresponding BMFF Box, similar to a file system path, using the BMFF Box names in \texttt{4cc} notation. When a specific BMFF Box occurs multiple times they can be addressed by their index using array notation and positive non-zero indices. The remaining data fields are all optional. When all fields are left out, the BMFF Box specified by \texttt{xpath} is to be excluded in its entirety. The next field is \texttt{length} which denotes the length a BMFF Box must have to be excluded from the hash, including the box header. The \texttt{data} field is a list of \texttt{DataMap} type, which holds an byte offset and a data value, if the BMFF Box contains the exact data value at the specified offset it is to be excluded from the hash. The \texttt{subset} data field allows exclusion of specific data ranges. It is a list of \texttt{SubsetMap}, which encapsulates a byte offset and a length. Data is excluded from the hash starting at the offset for the specified length. The offsets in the list must monotonically increasing and no subset must overlap with another. The final entry can have a length of \texttt{0} to indicate to exclude the remainder of the BMFF Box. The length can also exceed the BMFF Box boundary to achieve the same as length \texttt{0}. The field \texttt{version} indicates to exclude the BMFF Box if it has this version, this can only be set for BMFF Boxes which are FullBoxes. The \texttt{flags} is a byte string of exactly three bytes and if the BMFF Box has these flags set it must be excluded. This can also only be applied to FullBoxes. The final field \texttt{exact} is a boolean and can only be set if \texttt{flags} is also set and indicates whether the flags must match exactly to exclude the BMFF Box from the hash. Otherwise the flags must have at least the same bits set and additional flags can also be set. If \texttt{exact} if not set it defaults to \texttt{true}.
+
+\begin{minipage}{0.95\linewidth}
 \begin{lstlisting}[caption={ExclusionMap Rust Definition}, label=code:exclusion_map, language=Rust, captionpos=b]
     pub struct ExclusionMap {
         // path to the BMFF Box
         pub xpath: String,
-        // TODO
+        // exclude if box has this exact length
         pub length: Option<u32>,
-        // TODO
+        // exclude when exact data is contained
         pub data: Option<Vec<DataMap>>,
-        // TODO
+        // exclude specific data ranges
         pub subset: Option<Vec<SubsetMap>>,
-        // TODO
+        // exclude if the BMFF Box has this version
         pub version: Option<u8>,
-        // TODO
+        // exclude if these flags are set
         pub flags: Option<ByteBuf>,
-        // TODO
+        // exclude if flags match exactly
         pub exact: Option<bool>,
     }
 \end{lstlisting}
 \end{minipage}
 
-> special case of hashing (include box location in hash)
+In case the C2PA Manifest is embedded directly into an BMFF file, the BMFF Box it is contained in must be excluded from the hash.
+
+When a BMFF Box is removed after the C2PA Manifest has been created, it should be replaced with a \texttt{"free"} BMFF Box with the same length to make sure the hash is not invalidated by the removal of the Box. If the removal of a Box is expected to happen, the effected Box shall be replaced by a \texttt{"free"} BMFF Box of the same size for the duration of the signing. The placeholder must then be excluded from the hash. Once the signing is completed the Box needs to be put back in its original place.
+
+Since adding C2PA Manifest into BMFF-based file via MP4 boxes changes the positions of these Box, the position of root BMFF Box needs to be included in the hash to ensure the correct placement of Boxes.
 
 \subsubsection{Merkle Tree\label{sec:merkle}}
 
@@ -177,9 +191,9 @@ The validation can be either performed only on the initialization fragment or on
 
 The initialization segment contains the C2PA manifest packaged in a \texttt{uuid} BMFF box. In a fragmented BMFF context this manifest must contains the aforementioned \texttt{c2pa.hash.bmff} Assertion. To verify the initialization segment one has to read the C2PA manifest and use the included hash exclusion ranges to recreate the hash of the initialization segment. If this hash is equal to the one found in the manifest then the initialization segment is validated as trustworthy.
 
-Each fragment also contains a \texttt{uuid} box. However, the fragments only contain a CBOR-encoded data structure which holds information required for validation: the proof \texttt{hashes}, the \texttt{local\_id} and \texttt{unique\_id} and the \texttt{location} on that particular Merkle Tree, shown by the Rust structure BmffMerkleMap in \Cref{code:bmff_merkle}. The two IDs are required to identify the corresponding Merkle Tree from the C2PA manifest in the initialization segment and the location is the leaf index of the fragment which is needed to determine whether this fragment is the left or right child of their parent node.
+Each fragment also contains a \texttt{uuid} box. However, the fragments only contain a CBOR-encoded \cite{rfc8949} data structure which holds information required for validation: the proof \texttt{hashes}, the \texttt{local\_id} and \texttt{unique\_id} and the \texttt{location} on that particular Merkle Tree, shown by the Rust structure BmffMerkleMap in \Cref{code:bmff_merkle}. The two IDs are required to identify the corresponding Merkle Tree from the C2PA manifest in the initialization segment and the location is the leaf index of the fragment which is needed to determine whether this fragment is the left or right child of their parent node.
 
-\begin{minipage}{\linewidth}
+\begin{minipage}{0.95\linewidth}
 \begin{lstlisting}[caption={BmffMerkleMap Rust Definition}, label=code:bmff_merkle, language=Rust, captionpos=b]
     pub struct BmffMerkleMap {
         // unique ID
@@ -220,7 +234,9 @@ The validation of a fragment requires the successful validation of the accompany
 
 \subsection{Signing Fragmented BMFF Files\label{sec:sign_bmff}}
 
-\todo[inline]{explain the existing signing}
+As previously mentioned, in the context of a fragment MP4 video, the initialization segment file contains the \texttt{"uuid"} BMFF Box with the Manifest Store and each corresponding media fragment contains a \texttt{"uuid"} BMFF Box with the CBOR-encoded \texttt{BmffMerkleMap}.
+
+Currently, the signing process if only defined for VoD content. It requires in full set of media fragments and the initialization fragment. The BMFF-specific parts of the signing process starts with the creation of a placeholder Merkle Tree based on the number of media fragments. In the next step the fragments all receive a preliminary \texttt{BmffMerkleMap} embedded into their \texttt{"uuid"} BMFF Box, it contains the final values for the two ID fields and the location but the hashes are only placeholder data. Now that the media fragments have the embedded \texttt{"uuid"} BMFF Box, they are ready to be hashed. These hashes can now be used to generate the final Merkle Tree and this inturn can be used to insert the correct proof hashes in the media fragments. Now any of the rows of the Merkle Tree can be added into the \texttt{MerkleMap} alongside a placeholder hash of the initialization fragment. This preliminary data is now inserted into the initialization fragment, which is now ready to be hashed. This hash replaces the previously set placeholder.
 
 \section{Concurrent Approaches}
 

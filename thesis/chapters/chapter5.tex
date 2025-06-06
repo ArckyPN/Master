@@ -26,6 +26,38 @@ The following hardware and software was used during the development process:
     \label{tab:env}
 \end{table}
 
+\section{Project Structure}
+
+This project is distributed across seven subdirectories:
+
+\subsubsection{cdn}
+
+The \textbf{cdn} directory is standard Rust cargo application project and contains the distributer CDN server which hosts the live streams created in this testbed.
+
+\subsubsection{consumer}
+
+The \textbf{consumer} directory is a default SvelteKit application project. It holds the client website that plays the created live streams, validates their C2PA data and visualizes it.
+
+\subsubsection{media}
+
+The \textbf{media} directory is the default local disk output local of the live streams created in this testbed.
+
+\subsubsection{scripts}
+
+The \textbf{scripts} directory contains helper shell scripts to effortlessly run the testbed.
+
+\subsubsection{c2pa-js}
+
+The \texttt{c2pa-js} directory is a git submodule and contains the fork of the original \texttt{c2pa-js} library containing the client-side validation code.
+
+\subsubsection{c2pa-rs} 
+
+The \textbf{c2pa-rs} directory is a git submodule of the fork of the original \texttt{c2pa-rs} library. This is the Rust implementation of the C2PA specifications.
+
+\subsubsection{producer}
+
+The \textbf{producer} directory is a git submodule of my FFmpeg script generator.
+
 \section{Important Implementation Aspects\label{sec:implaspects}}
 
 Over the course of the implementation of this testbed I came across a number of challenges and noteworthy aspects. This section will go over these.
@@ -113,10 +145,6 @@ After the fragments are signed the C2PA data is extracted from them and then sen
 On the client side before validation, the URL is extracted from the fragment. This URL is then queried with a HTTP GET request to download the actual C2PA data. This data is then inserted in place of the URL "uuid" BMFF box and then the fragment is ready to be put into the validator as usual.
 
 For simplicity I use the CDN server for this as well.
-
-\subsubsection{Rolling Hash Signing\label{sec:rolling_hash_sign}}
-
-\todo[inline]{do I even need this? design sections is enough imo}
 
 \subsection{Extending the Client C2PA Package\label{sec:wasm}}
 

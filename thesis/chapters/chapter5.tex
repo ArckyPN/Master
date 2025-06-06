@@ -44,7 +44,7 @@ To provide the option to sign live stream I added a public method to the C2PA \t
 
 The \texttt{signer} is part of all signing function and is responsible for various tasks related to the digital signature. The \texttt{asset\_path} is the path to the initialization fragment file. The \texttt{fragment\_paths} is a list of paths pointing to all fragments that are part of the live stream set, which need to be included in the C2PA manifest. This list grows by one element with every new fragment created. The \texttt{output\_path} is the path to initialization fragment output file. This is where the signed initialization file and all fragments will be saved to during the signing process. The \texttt{window\_size} is the aforementioned number of leaves of each Merkle Tree. 
 
-\begin{minipage}{\linewidth}
+\begin{minipage}{0.95\linewidth}
 \begin{lstlisting}[caption={Original Signing Function}, label=code:fragment_bmff, language=Rust, captionpos=b]
     pub fn sign_fragmented_files<P: AsRef<std::path::Path>>(
         &mut self,
@@ -56,7 +56,7 @@ The \texttt{signer} is part of all signing function and is responsible for vario
 \end{lstlisting}
 \end{minipage}
 
-\begin{minipage}{\linewidth}
+\begin{minipage}{0.95\linewidth}
 \begin{lstlisting}[caption={New Live Signing Function}, label=code:live_sign, language=Rust, captionpos=b]
     pub fn sign_live_bmff<P: AsRef<std::path::Path>>(
         &mut self,
@@ -98,7 +98,7 @@ My initial idea to realize this was to add a new proprietary data field into bot
 
 In the case of the DASH MPD I have then added a "c2pa" data field of type \texttt{String} to the data structures \texttt{Initialization} and \texttt{S} (Segment). Since this implementation uses the \texttt{serde} crate for serialization of the data, this was all I had to do. Additionally, on the client \texttt{dash.js} seemed to use a generic XML parsing, since the newly added fields showed up without requiring any changes.
 
-Similarly to DASH, I started by adding a "c2pa" data of type \texttt{String} to the \texttt{MediaSegment} and the \texttt{Map} (Initialization segment) data structures. However, this implementation does not use \texttt{serde}, instead it uses \texttt{nom} \footnote{GitHub Repository: \url{https://github.com/rust-bakery/nom}}, which is crate that can be used to build arbitrary data parsers. This required manually adding the parsing of these new fields into the process. Furthermore, the \texttt{hls.js} player has similarly implemented their own m3u8 parsing, which would have required adding the same parsing to this code base as well.
+For HLS I started by adding, similarly to DASH, a "c2pa" data field of type \texttt{String} to the \texttt{MediaSegment} and the \texttt{Map} (Initialization segment) data structures. However, this implementation does not use \texttt{serde} for de-/serialization, instead it uses \texttt{nom} \footnote{GitHub Repository: \url{https://github.com/rust-bakery/nom}}, which is crate that can be used to build arbitrary data parsers. This required manually adding the parsing of these new fields into the process. Furthermore, the \texttt{hls.js} player has similarly implemented their own m3u8 parsing, which would have required adding the same parsing to this code base as well.
 
 However, at this point I had notice that the switch to segment timeline and the whole manifest manipulations lead to both players refusing the playback of the live stream anyways without any error messages whatsoever. Since debugging these players went beyond the scope of this thesis I abandoned this approach at this point. 
 
@@ -130,7 +130,7 @@ Since I forked the most recent edition of the repository and not the branch that
 
 The first half of change had to be done in TypeScript and began with adding the Rolling Hash validation as a new function definition to the \texttt{C2PA} interface:
 
-\begin{minipage}{\linewidth}
+\begin{minipage}{0.95\linewidth}
 \begin{lstlisting}[caption={New Rolling Hash Validation Function}, label=code:rh_validate, language=JavaScript, captionpos=b]
     export interface C2pa {
         ...

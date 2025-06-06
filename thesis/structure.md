@@ -2,44 +2,65 @@
 
 - [ ] Abstract / Zusammenfassung
 - [x] Introduction
-  - [ ] Motivation (What is C2PA used for? Why is it needed?)
+  - [x] Motivation (What is C2PA used for? Why is it needed?)
   - [x] Objective (Explore the viability or C2PA for Live Streaming)
   - [x] Scope (Short overview of what I will implement)
   - [x] Outline (Overview of the following chapters)
 - [ ] State of the Art
-  - [ ] Live Streaming (HTTP Adaptive Streaming / DASH & HLS)
-    - [ ] (anything specific I should mention about DASH / HLS?)
-  - [ ] C2PA (What is it?)
-    - [ ] In-depth overview of all the components (Claim, Manifest, Assertions, etc.)
-    - [ ] Fragmented BMFF Manifest structure
-    - [ ] BMFF Hashing
-    - [x] Merkle Trees
-    - [x] Validation
+  - [x] Live Streaming (HTTP Adaptive Streaming / DASH & HLS)
+  - [x] C2PA (What is it?)
+    - [x] In-depth overview of all the components (Claim, Manifest, Assertions, etc.)
+    - [x] Fragmented BMFF Manifest structure
+    - [x] BMFF Assertion
+      - [x] Hashing
+      - [x] Merkle Trees
+      - [x] Validation
+    - [x] Signing fMP4 Files
   - [ ] Concurrent Approaches (DRM, Fingerprinting, Watermarking?)
-- [x] Requirements (What do I need? Rust, HTTP Server, FFmpeg, Website, DASH, HLS, etc.)
+- [x] Requirements
+  - [x] Overview
+  - [x] Technical Requirements
+    - [x] Producer
+    - [x] Signer
+    - [x] Distributer
+    - [x] Consumer
 - [ ] Design (of the testbed, the four components / include CLI)
-  - [ ] Producer (Rust script to create FFmpeg command)
+  - [x] Producer (Rust script to create FFmpeg command)
     - [ ] CLI
-    - [ ] Settings File
-  - [ ] Signer (C2PA tool/library to sign Live Stream)
+    - [x] Settings File
+  - [x] Signer (C2PA tool/library to sign Live Stream)
     - [ ] CLI
-  - [ ] CDN (content host / distributer)
+    - [x] Alternative Signing Approaches
+      - [x] Optimized Merkle Tree
+      - [x] C2PA data in MPD
+      - [x] C2PA data on server
+      - [x] Rolling Hash
+  - [x] CDN (content host / distributer)
     - [ ] CLI
-  - [ ] Consumer (Client website to show / verify Live Stream)
+  - [x] Consumer (Client website to show / verify Live Stream)
 - [ ] Implementation (Specifics about the actual implementation)
-  - [ ] Environment (Devices used for Testing / Evaluation)
+  - [x] Environment (Devices used for Testing / Evaluation)
+  - [x] Project Structure
   - [ ] Important Implementation Aspects / Challenges
     - [x] Signing Optimization (8 Segments per Merkle Tree) [see](/thesis/notes.md#code-additions--changes)
-    - [x] Lots of re-transmissions of updated Segments
+      - [x] Merkle Tree
+      - [x] Data in MPD
+      - [x] Data on server
+    - [x] Extending c2pa-js (WASM validating)
+    - [x] Reading BmffHash Assertion (version issue)
     - [x] CDN caching (ReplayStream crate + DELETE from FFmpeg (extra) window size)
-    - [ ] Producer Inputs and their Specifics (e.g. WebCam stuff, external camera [Sony Program...], etc.)
-    - [ ] C2PA-compliant TLS certificates
+    - [x] Producer Inputs and their Specifics (e.g. WebCam stuff, external camera [Sony Program...], etc.)
+    - [ ] C2PA-compliant TLS certificates?
+    - [ ] Documentation (how to run testbed)?
   - [ ] Documentation (helper shell scripts, install instructions?)
 - [ ] Evaluation
+  - [x] Lots of re-transmissions of updated Segments (// TODO where to put this?)
   - [ ] Performance Original Impl vs. New Live (signing duration Benchmark comp)
   - [ ] Latency Impact (signing duration is the added latency)
   - [ ] Data Transmission (Uploading to / Downloading from CDN)
   - [ ] Alternative approaches where to put the manifests (in Segments like currently, on separate Server or in the MPD/Playlist)
+    - [ ] Merkle Tree not ideal for live
+  - [ ] How long does Hashing take?
 - [ ] Conclusion
   - [ ] Summary
   - [ ] Dissemination
@@ -48,3 +69,4 @@
     - [ ] Low-Latency support
     - [ ] MoQ (Manifests as separate Tracks)
     - [ ] Integration into Tools like FFmpeg / Cameras
+    - [ ] connection between multiple tracks/qualities

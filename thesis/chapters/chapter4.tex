@@ -16,7 +16,113 @@ An example shell scripts is shown in \Cref{ex:shell}.
 
 \subsection{Command Line Interface\label{sec:cli_producer}}
 
-\todo[inline]{do this closer to the end when in case anything changes until then}
+As mentioned the Command Line Interface (CLI) of the Producer has many options to configure it for many different use-cases. The Producer is primarily intended to create DASH live streams, which is why the output flag must point to an DASH Manifest MPD file with either a local path or an URL. The audio and video settings flags are optional and when not provided the Producer will auto generate the settings files and re-use them on subsequent uses.
+
+To simplify the usage of these complex options I have created an helper script to easily use the Producer with a few pre-configured methods during development, details will follow in \Cref{sec:docu}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Short Flag}} & \multicolumn{1}{l|}{\textbf{Long Flag}} & \textbf{Value}                                      & \textbf{Description}                                                                        \\ \hline
+    -o                                        & --output                                & \begin{tabular}[c]{@{}l@{}}Path/\\ URL\end{tabular} & \begin{tabular}[c]{@{}l@{}}The path to the output\\ DASH Manifest file (*.mpd)\end{tabular} \\ \hline
+    -a                                        & --audio                                 & Path                                                & \begin{tabular}[c]{@{}l@{}}The path to the audio\\ settings file\end{tabular}               \\ \hline
+    -v                                        & --video                                 & Path                                                & \begin{tabular}[c]{@{}l@{}}The path to the video\\ settings file\end{tabular}               \\ \hline
+    -s                                        & --script                                & Path                                                & \begin{tabular}[c]{@{}l@{}}The path to the script\\ file to create\end{tabular}             \\ \hline
+                                              & --ll                                    & boolean                                             & Enable Low Latency                                                                          \\ \hline
+    -t                                        & --title                                 & String                                              & Set the title of the stream                                                                 \\ \hline
+                                              & --hls                                   & boolean                                             & \begin{tabular}[c]{@{}l@{}}Enable concurrent HLS\\ Manifest creation\end{tabular}           \\ \hline
+                                              & --an                                    & boolean                                             & Disable audio                                                                               \\ \hline
+                                              & --vn                                    & boolean                                             & Disable video                                                                               \\ \hline
+    -k                                        & --keyframes                             & u8                                                  & \begin{tabular}[c]{@{}l@{}}Number of keyframes \\ per Fragment\end{tabular}                 \\ \hline
+                                              & --fps                                   & f32                                                 & Frame per second                                                                            \\ \hline
+                                              & --segdur                                & f32                                                 & \begin{tabular}[c]{@{}l@{}}Target Fragment\\ Duration\end{tabular}                          \\ \hline
+                                              & --embed-settings                        & boolean                                             & \begin{tabular}[c]{@{}l@{}}Embed selected encoding\\ settings into the video\end{tabular}   \\ \hline
+    \end{tabular}
+    \caption{Producer CLI Options}
+\end{table}
+
+The input of the live stream is configured using an subcommand of the Producer. I will give each type of input its own section.
+
+\subsubsection{Remote}
+
+The \textbf{remote} command uses an external resource as input. Anything that can be addressed using an URL and that is natively supported by FFmpeg can be used. For example publicly hosted DASH / HLS streams, IP-cameras or more.
+
+The only option this command has is a positional argument pointing to the remote input in form of an URL.
+
+\subsubsection{Local}
+
+The \textbf{local} command takes a local files as input. This is essentially the same as the remote command, the difference being that is uses an local path instead of a remote URL. The same restricts apply.
+
+The path is supplied with a positional argument. However, it has a second option. This being whether or not to create a live stream. For example when using a video file as input, this video has a finite runtime. Setting this flag will make FFmpeg endlessly loop through the file to create an live stream.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Short Flag}} & \multicolumn{1}{l|}{\textbf{Long Flag}} & \textbf{Value} & \textbf{Description}                                                   \\ \hline
+                                              &                                         & Path           & \begin{tabular}[c]{@{}l@{}}The path to the input\\ file.\end{tabular}  \\ \hline
+    -l                                        & --live                                  & boolean        & \begin{tabular}[c]{@{}l@{}}Loop through the \\ video file\end{tabular} \\ \hline
+    \end{tabular}
+    \caption{Local Command Options}
+\end{table}
+
+\subsubsection{Standard Input}
+
+The \textbf{std-in} command uses the standard input pipe to receive raw video data as input for FFmpeg.
+
+The only required options is the resolution of the video data, given with the height and width of the video in number of pixels.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Short Flag}} & \multicolumn{1}{l|}{\textbf{Long Flag}} & \textbf{Value} & \textbf{Description} \\ \hline
+                                              & --w                                     & u16            & The pixel width      \\ \hline
+                                              & --h                                     & u16            & The pixel height     \\ \hline
+    \end{tabular}
+    \caption{Standard Input Command Options}
+\end{table}
+
+\subsubsection{Device}
+
+The \textbf{device} command uses a capture device as input. The most common use-case for this would be the webcam of a laptop. On linux device are addressed using a path to the device directory (\texttt{/dev/*}), for example the built-in webcam of a laptop is typically the \texttt{/dev/video0} device, which this command defaults to.
+
+As before the path is given as argument with the additional option to set which input format to use.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Short Flag}} & \multicolumn{1}{l|}{\textbf{Long Flag}} & \textbf{Value} & \textbf{Description}                                                      \\ \hline
+                                              &                                         & Path           & \begin{tabular}[c]{@{}l@{}}The path to the \\ capture device\end{tabular} \\ \hline
+    -f                                        & --format                                & String         & Input format                                                              \\ \hline
+    \end{tabular}
+    \caption{Device Command Options}
+\end{table}
+
+\subsubsection{Screen}
+
+The \textbf{screen} command uses the device's screen as input. I have not fully developed this command to be completely usable, since this turned out to be more complex than I initially expected and I needed to focus on more important aspects. The original intention was to have a works similar to other screen capture tools where the user can select a specific window, screen or sub-region of a screen with a resolution and capture frame rate to create a live screen.
+
+\subsubsection{Test}
+
+The \textbf{test} command is the final method of input. It the built-in FFmpeg virtual input format \texttt{lavfi} to generate a test image. This test image has a few vertical colorful bars, a horizontal scrolling gradient with a timestamp counting up the seconds the stream is running for. Examples for this test image can be seen in \Cref{fig:incomple_mt}, \Cref{fig:merkle_tree} and \Cref{fig:rolling_hash}.
+
+This input can be configured with a starting resolution, frame rate and an optional duration of the generated video. If the duration is omitted, it wil crated an endless stream. Otherwise the duration is provided in milliseconds.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Short Flag}} & \multicolumn{1}{l|}{\textbf{Long Flag}} & \textbf{Value} & \textbf{Description}                                                        \\ \hline
+                                              & --w                                     & u16            & The pixel width                                                             \\ \hline
+                                              & --h                                     & u16            & \begin{tabular}[c]{@{}l@{}}Loop through the \\ video file\end{tabular}      \\ \hline
+    -r                                        & --fps                                   & f32            & Input frame rate                                                            \\ \hline
+    -d                                        & --dur                                   & u64            & \begin{tabular}[c]{@{}l@{}}Optional duration\\ in milliseconds\end{tabular} \\ \hline
+    \end{tabular}
+    \caption{Test Command Options}
+\end{table}
 
 \subsection{Settings Files\label{sec:settings}}
 
@@ -55,7 +161,35 @@ The Signer is an extension of the existing \texttt{c2patool} command line progra
 
 \subsection{Command Line Interface\label{sec:cli_signer}}
 
-\todo[inline]{do this closer to the end when in case anything changes until then}
+The CLI of the Signer, which is actually the \texttt{c2patool} is quite extensive. In an effort to keep concise and not too complex, I will only list the options that I am using in this testbed and the ones I have added to implement live signing.
+
+As before I will begin with the general options. The path to the asset file is an argument, making it not require any designating flag. In normal operation this file is the target of either signing or validation. However, since my live signing approach uses an HTTP server to receive files, I have no use for this argument. But since this argument is mandatory, I simply pass it arbitrary data and ignore it.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Short Flag}} & \multicolumn{1}{l|}{\textbf{Long Flag}} & \textbf{Value} & \textbf{Description}                                                                \\ \hline
+                                              &                                         & Path           & The path to the asset file.                                                         \\ \hline
+    -o                                        & --output                                & Path           & \begin{tabular}[c]{@{}l@{}}The path to the output\\ file or directory\end{tabular} \\ \hline
+    -m                                        & --manifest                              & Path           & \begin{tabular}[c]{@{}l@{}}The path to the C2PA\\ Manifest JSON file\end{tabular} \\ \hline
+    \end{tabular}
+    \caption{Signer CLI Options}
+\end{table}
+
+In addition to the general options the \texttt{c2patool} uses a few commands for additional configuration. As previously mentioned I have added the "live" command to the tool. This command turns the \texttt{c2patool} into an HTTP server to receive the live stream from the Producer. The target URL is the ingest URL of the CDN.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Short Flag}} & \multicolumn{1}{l|}{\textbf{Long Flag}} & \textbf{Value}                                           & \textbf{Description}                                                                              \\ \hline
+    -b                                        & --bind                                  & \begin{tabular}[c]{@{}l@{}}Socket\\ Address\end{tabular} & \begin{tabular}[c]{@{}l@{}}The Socket Address on which \\ the Signer will listen on.\end{tabular} \\ \hline
+    -t                                        & --target                                & URL                                                      & \begin{tabular}[c]{@{}l@{}}The CDN URL where to\\ ingest the output to\end{tabular}              \\ \hline
+    -w                                        & --window                                & usize                                                    & \begin{tabular}[c]{@{}l@{}}The number of Fragment\\ in one Merkle Tree group\end{tabular}        \\ \hline
+    \end{tabular}
+    \caption{Live Command Options}
+\end{table}
 
 \subsection{Signing Approaches\label{sec:rolling_hash}}
 
@@ -89,7 +223,7 @@ This approach is very similar to the previous one with the C2PA data being kept 
 
 An advantage of this is the fact that in a typical live streaming scenario it is very common that the Manifests are updated and downloaded on a per fragment-basis anyways. This way the C2PA data is essentially received for free, barring some bigger Manifests.
 
-One problem with this approach is adding the data to the Manifests. Initially, I started by forking the respective parsing crates to simply add new data fields to the Manifests, which would have no longer been conform to their respective specifications. I would have needed to the same for the client as well to read out the new data again and that started to become too complex. An alternative could be to misuse an existing field for this purpose. For DASH the EventStream (Section 5.10.2 of the DASH specifications \cite{DASH}) \todo[inline]{update the cite definition} would be an ideal option to signal the data as custom events. \todo[inline]{something similar for HLS?}
+One problem with this approach is adding the data to the Manifests. Initially, I started by forking the respective parsing crates to simply add new data fields to the Manifests, which would have no longer been conform to their respective specifications. I would have needed to the same for the client as well to read out the new data again and that started to become too complex. An alternative could be to misuse an existing field for this purpose. For DASH the EventStream (Section 5.10.2 of the DASH specifications \cite{DASH}) would be an ideal option to signal the data as custom events. \todo[inline]{something similar for HLS?}
 
 Technical details and issues with this approach follow in \Cref{sec:in_manifest}.
 
@@ -149,19 +283,30 @@ The CDN caches all new files in memory to ensure that they can be provided as fa
 
 \subsection{Command Line Interface\label{sec:cli_cdn}}
 
-\todo[inline]{do this closer to the end when in case anything changes until then}
+The CLI of the CDN is kept rudimentary, since it doesn't require much configuration. 
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|r|l|l|l|}
+    \hline
+    \textbf{Short Flag} & \textbf{Long Flag} & \textbf{Value}                                            & \textbf{Description}                                                                           & \textbf{Default} \\ \hline
+    -b                  & --bind             & \begin{tabular}[c]{@{}l@{}}Socket \\ Address\end{tabular} & \begin{tabular}[c]{@{}l@{}}The Socket Address on \\ which the CDN will listen on\end{tabular} & {[}::{]}:6363    \\ \hline
+    -m                  & --media            & Path                                                      & \begin{tabular}[c]{@{}l@{}}The Path to the Directory \\ where to write Data to\end{tabular}   & ./media          \\ \hline
+    \end{tabular}
+    \caption{CDN CLI Options}
+\end{table}                                                      
 
 \section{Consumer\label{sec:consumer}}
 
 The Consumer is a website built using the SvelteKit \footnote{Svelte Homepage: \url{https://svelte.dev/}} framework. The website consists of four major parts: Controls, Player, Manifest and the Visualization of either the Merkle Tree or the Rolling Hash. \Cref{fig:merkle_tree} shows and example of the visualization of a full Merkle Tree and a similar example of a Rolling Hash is shown in \Cref{fig:rolling_hash}. In the appendix there is also an example image of an incomplete Merkle Tree, see \Cref{fig:incomple_mt}.
 
-\todo[inline]{add screenshot of page, with a complete Merkle Tree}
 \begin{figure}
+    \includegraphics[width=0.95\linewidth, fbox]{merkle-tree-full.png}
     \caption{Example Merkle Tree Visualization}
     \label{fig:merkle_tree}
 \end{figure}
-\todo[inline]{add screenshot of page, with a Rolling Hash}
 \begin{figure}
+    \includegraphics[width=0.95\linewidth, fbox]{rolling-hash.png}
     \caption{Example Rolling Hash Visualization}
     \label{fig:rolling_hash}
 \end{figure}

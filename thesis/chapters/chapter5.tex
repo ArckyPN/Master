@@ -64,7 +64,9 @@ Over the course of the implementation of this testbed I came across a number of 
 
 \subsection{Signing Optimization\label{sec:optimization}}
 
-The primary task of this thesis was the optimization of the signing process to be performant enough to be integrated into a live streaming application. The first approach was the optimization of the existing Merkle Tree method. During that implementation I came up with two mutations of that approach which aimed to deal with some of the shortcomings I noticed during development. Both of these kept the actual C2PA data in the "uuid" BMFF boxes separate from the fragment files. The first instead writing this data into the DASH and HLS manifests (MPD and MediaPlaylist, respectively), while the second put this data onto a separate server.
+The primary task of this thesis was the optimization of the signing process to be performant enough to be integrated into a live streaming application. The first approach was the optimization of the existing Merkle Tree method. During that implementation I came up with two mutations of that approach which aimed to deal with some of the shortcomings I noticed during development. Both of these kept the actual C2PA data in the "uuid" BMFF boxes separate from the fragment files. The first instead writing this data into the DASH and HLS manifests (MPD and MediaPlaylist, respectively), while the second put this data onto a separate server. 
+
+A secondary consideration regarding the optimization of the signing process is the reduction of publishing redundant data to the CDN. This does not only reduces the overhead and strain on network bandwidth but also allows the CDN to efficiently cache the media fragments. For example the original signing method would have required to publish the entire live stream anew for every created fragment, even the optimized Merkle Tree method still has to publish certain fragments up to eight times (or which ever window size is used). 
 
 \subsubsection{Merkle Tree Signing\label{sec:merkle_opt}}
 
@@ -181,6 +183,36 @@ The second half the changes needed to be done in Rust code. They started out wit
 
 The final step after the implementation was building the changes into usable packages using \texttt{rush} by running \texttt{rush build} in a terminal. Once this command had run its course, the code changes were ready to use.
 
+\subsection{Styling Video Element}
+
+The people behind the \texttt{c2pa-rs} code also have a fork of the \texttt{dash.js} video player \footnote{C2PA dash.js Player: \url{https://github.com/contentauth/dash.js/tree/c2pa-dash/samples/c2pa}}, where they have created a video player combining \texttt{dash.js} and \texttt{video.js} \footnote{video.js Homepage: \url{https://videojs.com/}} that is able to validate the C2PA Manifests of the video playing and show the status of the validation. \texttt{video.js} is a JavaScript library that enables customizing a HTML video element.
+
+This video player shows the validation status of each media fragment on the seekbar of the video element. Valid sections are shown in blue, invalid in red and unknown section are colored in gray. An example of this seekbar is shown in \Cref{fig:seekbar}. For presentation purposes the stream contains two invalid fragments. The same image also shows the second addition: a Content Credentials icon in the bottom left corner. This icon shows the overall validation status of the entire stream. It also doubles as a clickable button to open an overlay over the video to display a selection of metadata from the C2PA Manifest, like the issuer of the signing certificate, the tool or device used to create the Manifest, the name of the signer and their website and social media links, the validation status and possibly more. This overlay is shown for a fully valid stream in \Cref{fig:overlay-success} and for a stream with a few invalid sections in \Cref{fig:overlay-failure}.
+
+I have adapted the sample code from the above linked GitHub repository into this testbed. I kept everything in the same visual display style. However, I have modified the code itself into TypeScript and my style of coding to make it fit into the website framework I am using. During this implementation I came across three major challenges.
+
+The first problem was the proper integration of \texttt{video.js} into my Svelte website. Since the documentation of \texttt{video.js} is not that good, in my opinion, it took me a while to understand that it is imperative to include the library provided CSS file and give the HTML video element the class \texttt{video-js}.
+
+The next issue was the filling of the overlay menu with the information from the C2PA Manifest. The sample code using messy string manipulation to set the \texttt{innerHTML} property of the menu's list elements to build this menu. However, doing it this way didn't not trigger re-renders in the Svelte framework and the menu always remain in the initial state. I overcame this problem by create the required HTML elements using the document JavaScript API, namely \texttt{document.createElement(...)}. Then set all the required parameters of those elements and then explicitly inserting the elements into the document. The sample code also re-created the menu with every timeline update, which was no big problem when they constantly overwrite the inner HTML of the menu elements. My approach, however, required to build this menu once for the first time a menu element has a value and then only update the value when it changes.
+
+Finally, I had the issue that the seekbar itself of the timeline would not show up when the live stream starts. Sometimes it showed later into the running stream with wildly different delays and sometimes it would never show up. When using a VoD stream the seekbar showed up right away. Eventually, I came across two GitHub issues regarding this dilemma \footnote{\texttt{video.js} Issue \#7095: \url{https://github.com/videojs/video.js/issues/7095}} \footnote{\texttt{video.js} Issue \#6630: \url{https://github.com/videojs/video.js/issues/6630}} on the \texttt{video.js} repository. The problem was that for live streams \texttt{video.js} usually shows no seekbar at all, instead it shows an indicator that a live stream is being watched. However, there is a options for the initial setup to enable a live UI which would show a seekbar. I was using this options from the start. The developers of \texttt{video.js} are of the opinion, though, that it makes little sense to show a seekbar when only very little of the live stream has been loaded into the browser and have configured the live UI to only show the seekbar once at least 30 seconds of media has been loaded. Fortunately, it is possible to configure this parameter and I have set the value to zero seconds, which makes the seekbar appear right away.
+
+\begin{figure}
+    \includegraphics[width=0.95\linewidth, fbox]{videojs-styling.png}
+    \caption{Seekbar Video Styling}
+    \label{fig:seekbar}
+\end{figure}
+\begin{figure}
+    \includegraphics[width=0.95\linewidth, fbox]{overlay-success.png}
+    \caption{Video Content Credentials Overlay}
+    \label{fig:overlay-success}
+\end{figure}
+\begin{figure}
+    \includegraphics[width=0.95\linewidth, fbox]{overlay-failure.png}
+    \caption{Video Content Credentials Overlay With Errors}
+    \label{fig:overlay-failure}
+\end{figure}
+
 \subsection{Reading the \texttt{c2pa.hash.bmff.v2} Assertion}
 
 Reading the "\texttt{c2pa.hash.bmff.v2}" assertion proved to be a spiteful challenge. Initially, when I was done with the implementation and wanted to test it out, I would always get the result that none of the segments would correctly validate with trustworthy C2PA manifests.
@@ -195,7 +227,7 @@ The Distributer is simple HTTP server built with the \texttt{Rocket}\footnote{Ro
 
 To keep the forwarding delay to a minimum the most recent fragments are kept in memory of the Distributer as part of a proxy cache. This cache consists of two components a \texttt{DashMap} and a \texttt{ReplayChannel}. The \texttt{DashMap} is provided by the \texttt{dashmap}\footnote{dashmap GitHub: \url{https://github.com/xacrimon/dashmap}} Rust crate and is essentially a standard Rust \texttt{HashMap} that has been highly optimized for concurrency. The \texttt{ReplayChannel} is taken from the \texttt{replay-channel}\footnote{replay-channel GitHub: \url{https://github.com/freenet/replay-channel}} and works just like normal broadcast data channel in Rust with the added caveat that subscribers to that channel will always receive all data starting at the beginning of the channel. With this cache the CDN is able to write fragments to the cache, identified by their URIs, as they arrive. Then when the Consumer requests a new fragment, the CDN can check if the requested URI is cached. If it is cached I can subscribe to the corresponding channel and send the data as response. When a fragment wasn't cached the CDN will instead read the fragment from local storage.
 
-I make use of the \texttt{FFmpeg} arguments \texttt{-window\_size <num>} and \texttt{-extra\_window\_size <num>} to prevent the cache from caching unnecessarily many fragments and stop it from growing too much. The window size argument denotes the number of fragments kept in the DASH manifest and HLS media playlist. The extra window size option defines the number of fragment in addition to window size that are kept saved on the disk. Since I am using an HTTP output, instead of directly deleting the fragments, FFmpeg will instead send a HTTP DELETE request for the corresponding fragment. The Signer forwards these deletes to the CDN where the denoted fragment is removed from the cache.
+I make use of the \texttt{FFmpeg} arguments \texttt{-window\_size <num>} and \texttt{-extra\_window\_size <num>} to prevent the cache from caching unnecessarily many fragments and stop it from growing too large. The window size argument denotes the number of fragments kept in the DASH manifest and HLS media playlist. The extra window size option defines the number of fragment in addition to window size that are kept saved on the disk. Since I am using an HTTP output, instead of directly deleting the fragments, FFmpeg will instead send a HTTP DELETE request for the corresponding fragment. The Signer forwards these deletes to the CDN where the denoted fragment is removed from the cache. Additionally, the CDN would not directly delete the fragment from the cache, instead it should save the data to the attached storage. However, since I configured the Signer and CDN to use the same local directly as storage, I am skipping this part in the CDN to prevent unnecessary redundant IO operations.
 
 \subsection{Producer Inputs\label{sec:producer_inputs}}
 
@@ -227,18 +259,114 @@ For this thesis I was provided with a Sony Alpha 7 III, so these steps apply onl
 
 Normally, Sony provides the software tool Imaging Edge Webcam \footnote{Imaging Edge Webcam Product Page: \url{https://support.d-imaging.sony.co.jp/app/webcam/en/}}. Unfortunately, this program is only supported on Windows and macOS operating systems, as described on the download page, and I am using a Linux operating system. However, I was able to find a Reddit thread which had a comment which details a workaround to get an alternative working \footnote{Reddit Sony Imaging Edge Webcam in Ubuntu: \url{https://www.reddit.com/r/Ubuntu/comments/s4zjo7/comment/kwsoxzm/}}.
 
-This approach uses the tool \texttt{gphoto2} \footnote{gPhoto Homepage: \url{http://gphoto.org/}}, an open source application to digital cameras and media players on Unix-like systems. The first step is installing the required tools \texttt{gphoto2}, \texttt{video4linux2 loopback-utils} and \texttt{FFmpeg} by running \texttt{sudo apt install gphoto2 v4l2loopback-utils ffmpeg}, followed by plugging in the camera using a USB cable. If the file system automatically mounts the camera, it is important to unmount it. \todo[inline]{IMPORTANT: select that specific option! check what it was named!!!} The next step is creating a new video device using the video feed from the camera. Before the device can be crated it is important to be able to determine which device is being crated by this process: first make sure no other loopback service is running by stopping the service using the command \texttt{sudo rmmod v4l2loopback}. Next determine the currently available video devices by remembering the list given by \texttt{ls /dev/video*}. Now start the loopback service using the camera's video feed with the command \texttt{sudo modprobe v4l2loopback exclusive\_caps=1 max\_buffers=2} to create the new video device. The designation of this device can be determined by listing the available video device again (with the same command as before). Whatever device that is now on this list that wasn't there before is the device that was created by this process. Whether this process has worked can be verified by running \texttt{gphoto2 --auto-detect}. If the process was successful the terminal should now display the camera model name and the port it is connected to. Finally, the last step is actually piping the video feed from the camera to the video device by running the final command \texttt{photo2 --stdout --capture-movie | ffmpeg -i - -vcodec rawvideo -pix\_fmt yuv420p -threads 0 -f v4l2 <video device>}. 
+This approach uses the tool \texttt{gphoto2} \footnote{gPhoto Homepage: \url{http://gphoto.org/}}, an open source application to digital cameras and media players on Unix-like systems. The first step is installing the required tools \texttt{gphoto2}, \texttt{video4linux2 loopback-utils} and \texttt{FFmpeg} by running \texttt{sudo apt install gphoto2 v4l2loopback-utils ffmpeg}, followed by plugging in the camera using a USB cable. If the file system automatically mounts the camera, it is important to unmount it. \todo{IMPORTANT: select that specific option! check what it was named!!!} The next step is creating a new video device using the video feed from the camera. Before the device can be crated it is important to be able to determine which device is being crated by this process: first make sure no other loopback service is running by stopping the service using the command \texttt{sudo rmmod v4l2loopback}. Next determine the currently available video devices by remembering the list given by \texttt{ls /dev/video*}. Now start the loopback service using the camera's video feed with the command \texttt{sudo modprobe v4l2loopback exclusive\_caps=1 max\_buffers=2} to create the new video device. The designation of this device can be determined by listing the available video device again (with the same command as before). Whatever device that is now on this list that wasn't there before is the device that was created by this process. Whether this process has worked can be verified by running \texttt{gphoto2 --auto-detect}. If the process was successful the terminal should now display the camera model name and the port it is connected to. Finally, the last step is actually piping the video feed from the camera to the video device by running the final command \texttt{photo2 --stdout --capture-movie | ffmpeg -i - -vcodec rawvideo -pix\_fmt yuv420p -threads 0 -f v4l2 <video device>}. 
 
 Once this command is running the camera feed is now accessible from the specified video device.
 
 I have automated this process in the helper shell script. I split this process up into two additional shell scripts in the Producer repository: setup and run-capture. The setup encompasses everything after the dependency installation up until the final piping command. It stops the possibly running loopback services, reads the currently running video devices and keeps them in memory, then is starts the loopback service, reads the available devices again, then it filters out all video devices that are new in the second reading. Finally, when multiple new devices have found it prompts the use to choose which device to use. Otherwise it will automatically use the one device found. The determined video device path will be printed to the standard output. The run-capture script expects the video capture device path argument and will simply run the final piping command.
 
-The automation starts by calling the setup script and saving the returned video device to a variable. Then it starts the run-capture script in a separate terminal using \texttt{gnome-terminal -- ./run-capture \$VIDEO\_DEVICE}. Finally, I am waiting five seconds to make sure that the video device is saturated. \todo[inline]{check if this might be the cause for the poor latency, maybe it starts at the beginnig???}
-
-\subsection{TLS Certificates}
-
-\todo[inline]{mention anything about the difficulty of getting compatible certificates?}
+The automation starts by calling the setup script and saving the returned video device to a variable. Then it starts the run-capture script in a separate terminal using \texttt{gnome-terminal -- ./run-capture \$VIDEO\_DEVICE}. Finally, I am waiting five seconds to make sure that the video device is saturated. 
 
 \section{Documentation\label{sec:docu}}
 
-introduce the shell scripts to easily run the testbed, install instructions as well?
+To effortlessly run this testbed during development I have created four helper shell scripts. Each of these scripts corresponds to one of the four components of this testbed. They are pre-configured with options, which allow running the testbed without needing specific knowledge of the CLI options of all the components. 
+
+However, it still possible to overwrite some of the default values, specifically only for the Signer and CDN scripts. This can be achieved using environment variables. For example on Linux, if one wants to use port 7000 instead of the default port of the CDN, the script command would like the following: \texttt{PORT=7000 ./scripts/cdn}. When setting multiple overwrites the individual environment variable declarations are separated by whitespaces.
+
+\subsection{Producer}
+
+The \texttt{./scripts/producer} does not use environment variables to overwrite default values. Instead it uses a similar CLI interface to the actual Rust programs. By default, if no arguments given, the producer with use the test image as input. To configure it, the first argument is a subcommand followed by an optional input value. 
+
+All available options are:
+
+\begin{itemize}
+    \item Test:
+    \begin{itemize}
+        \item Command: test
+        \item Input: none
+        \item Description: use a test image as input (default behavior if no command given)
+    \end{itemize}
+    \item Webcam:
+    \begin{itemize}
+        \item Command: webcam
+        \item Input: none
+        \item Description: use \texttt{/dev/video0} as input device
+    \end{itemize}
+    \item Device:
+    \begin{itemize}
+        \item Command: device
+        \item Input: capture device path
+        \item Description: same webcam command, but with a specific capture device
+    \end{itemize}
+    \item Local:
+    \begin{itemize}
+        \item Command: local
+        \item Input: path to local video file
+        \item Description: use the local video file as input
+    \end{itemize}
+    \item Remote:
+    \begin{itemize}
+        \item Command: remote
+        \item Input: URL to remote resource
+        \item Description: use the remote resource as input
+    \end{itemize}
+    \item DroidCam:
+    \begin{itemize}
+        \item Command: droidcam
+        \item Input: none
+        \item Description: use the default address of the DroidCam Android app as input 
+    \end{itemize}
+    \item External:
+    \begin{itemize}
+        \item Command: external
+        \item Input: none
+        \item Description: use an external cameras as input (this will run the script described in \Cref{sec:ext_cam})
+    \end{itemize}
+    \item Help:
+    \begin{itemize}
+        \item Command: help
+        \item Input: none
+        \item Description: print a help page describing these exact commands 
+    \end{itemize}
+\end{itemize}
+
+This script must be launched after both the Signer and CDN are running, otherwise the output will point to a non-existing target and FFmpeg will crash.
+
+\subsection{Signer}
+
+The \texttt{./scripts/signer} script will run the \texttt{c2patool} in live signing mode. Configuration options are the address of the CDN ingest URL, which should be the address the CDN is using, the output directory where to save the data to, the path to the C2PA Manifest JSON definition file and the window size for the optimize Merkle Tree signing. This script must be running before starting the Producer.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Variable}} & \textbf{Value} & \textbf{Description}                                                                    \\ \hline
+    CDN                                     & URL            & CDN ingest URL                                                                          \\ \hline
+    OUTPUT                                  & Path           & Path to save directory                                                                  \\ \hline
+    MANIFEST                                & Path           & \begin{tabular}[c]{@{}l@{}}Path to C2PA Manifest JSON\\ definition file\end{tabular}    \\ \hline
+    WINDOW                                  & usize          & \begin{tabular}[c]{@{}l@{}}Window size for optimized\\ Merkle Tree signing\end{tabular} \\ \hline
+    \end{tabular}
+    \caption{Signer Environment Variables}
+\end{table}
+
+\subsection{CDN}
+
+The \texttt{./scripts/cdn} starts the CDN server. It can be configured with a different localhost port or the address can be overwritten entirely (in this case the port variable has no effect) and the output directory can be specified. This script must be running before starting the Producer. The order of running the Signer or CDN first does not matter.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|r|l|l|}
+    \hline
+    \multicolumn{1}{|l|}{\textbf{Variable}} & \textbf{Value}                                           & \textbf{Description}                                                                        \\ \hline
+    PORT                                    & u16                                                      & Localhost Port on which to listen                                                           \\ \hline
+    BIND                                    & \begin{tabular}[c]{@{}l@{}}Socket\\ Address\end{tabular} & \begin{tabular}[c]{@{}l@{}}he Socket Address on which\\ the CDN will listen on\end{tabular} \\ \hline
+    MEDIA                                   & Path                                                     & \begin{tabular}[c]{@{}l@{}}The path to the output \\ directory\end{tabular}                 \\ \hline
+    \end{tabular}
+    \caption{CDN Environment Variables}
+\end{table}
+
+\subsection{Consumer}
+
+The \texttt{./scripts/consumer} script is the easiest of all the scripts and does not require any configuration. This script will run the SvelteKit website and open it automatically in the default web browser. The will try to use to port \texttt{5173} of localhost and if that is not available it will automatically increment the port by \texttt{1} until it finds an available port.
+
+This script can be run whenever one wants.

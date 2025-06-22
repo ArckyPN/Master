@@ -51,6 +51,8 @@ In this section I will present the results of the above described benchmarks and
 
 I have split the data plots into two comparisons. One comparing each signing method in relation to the different representations, shown in \Cref{fig:sign-dur1} and the other comparing the signing method to each other per representation, shown in \Cref{fig:sign-dur2}.
 
+This signing procedure is added step into the creation of this live stream which is why I equate the signing duration as the impact on the latency of the live stream.
+
 Since the original Merkle Tree signing method signs every single fragment that has been created over the course of the live stream, I expected the overall signing duration to steadily increase as the live stream gets longer. This expectation is confirmed when looking at \Cref{fig:sign-dur1-og}. The signing duration of all four representations linearly increases in proportion to the number of fragments that are being included in the signing process. It can also be deduced that the larger the input files are the stronger the duration increases. 
 
 I will score the performance of the original Merkle Tree signing method by looking at how many fragments can be signed within one second. Since the graphs are consistently linear, I will measure this score by taking the signing duration of the 100th fragment and extrapolating its signing duration to one second.

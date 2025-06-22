@@ -1,25 +1,31 @@
 \chapter{Conclusion\label{cha:chapter7}}
 
-in Conclusion...
+I will begin the conclusion to this thesis with a summary of what I have presented in this thesis, followed by a dissemination of C2PA on what real world applications can benefit from it. Finally, I will come to a close with an outlook on C2PA, possibilities how the shown implementation can be expanded upon and further research into this area.
 
 \section{Summary\label{sec:summary}}
 
+I began this thesis with a look into the C2PA technical specifications to get a sense of what C2PA is all about and to understand how to improve the existing fragmented BMFF signing method to make it more suitable for live streaming. In parallel I started with the implementation of the base frame of the testbed made up of the four components: Producer, Signer, Distributer and Consumer. The Producer is a configurable FFmpeg script generator, which is used to create the live stream. The Signer is a modification of the \texttt{c2patool} which acts an HTTP server, which receives the live stream from the Producer's FFmpeg command and then signs the live stream as it arrives and then publishes the live stream to the Distributer. The Distributer is a pseudo CDN HTTP server, which receives the live stream from the Signer and then hosts it for consumption. The Consumer is a website that uses the popular \texttt{dash.js} and \texttt{hls.js} video players to play the signed live stream, requested from the CDN, and also validates whether the received live stream is trustworthy according to the C2PA specifications. It also visualizes the validation status.
 
+Once this basic frame was standing I continued with the optimization of the signing method. First, I tried out the existing implementation in this live streaming context and learnt that is technically works, but the required computational power become too large too fast. My first optimization approach was to use the Merkle Tree concept but make use of the possibility to use multiple Merkle Trees in the C2PA Manifest. I settled on grouping fragments in sets of eight and signing these into one Merkle Tree. This way I reduced the number of fragments needed to be signed from all existing fragments down to at most eight. This significantly lowered not only the time it took to sign new fragments but also the amount of data required to be published to the CDN, a lot of which was redundant data. I tried out two mutations of this approach as well, both of which decoupled the embedded C2PA from the file themselves and one of them put that data on a separate server and the other put the data into the DASH/HLS Manifests, namely the MPD for DASH and the MediaPlaylists for HLS. However, I had several issues with the implementation of these mutations and since this optimized Merkle Tree approach still required the uploaded of a lot of redundant data, I ultimately scrapped these two mutations in favour of creating a completely new signing method. This method combined all the previous lessons I had learnt and also wasn't limited by adhering to the C2PA specifications. It uses a Rolling Hash to created a single chain of hashes, with each link being one media fragment of a representation of the live stream.
+
+I measured the performance of all three of these signing method by looking at how long the actual signing process takes and how much data is required to be uploaded to the network. For this benchmark I created a live streams consisting of 100 media fragments at four different quality settings. One for a typical audio track and three at low, mid and high video encoding levels. The results confirmed that the original method was the worst method by a significant margin. Both metrics increased in a linear fashion as the number of fragments increased. The optimized approach improved both metrics significantly. They both still increased linearly, since it is still the same Merkle Tree concept, but every eighth fragment the duration and upload size reset, capping out the maximum at a much lower value compared to the original method. Finally, the Rolling Hash approach came out to the best signing method of the bunch. It has the lowest signing duration as well as the lowest upload sized.
 
 \section{Dissemination\label{sec:dissemination}}
 
+The application possibilities for C2PA are near endless. So much of our current world revolves around media and there is no way around seeing countless pieces of media every day. From images, videos and live streams on social media or any other website, PDFs at work, movies or music on streaming services to TV broadcasts, media is everywhere in this digital age.
 
+The signing and validating of C2PA can be integrated into even more places, since media goes through so many steps of processing before it is being released to be viewed by the public. The validating can be integrated in any of the previously mentioned places where media can be viewed and so many more. The signing can be made part of digital tools like FFmpeg, editing softwares, any actors on the way of the journey media takes and many more. But it can also be integrated into physical devices, like cameras, scanners, smartphones and more.
 
-\section{Problems Encountered\label{sec:problems}}
-
-
+The more places C2PA can get integrated the better user are able to verify that the media they are viewing is from a trustworthy source, while also protecting less trained eyes from artificially generated or forged media.
 
 \section{Outlook\label{sec:outlook}}
 
-integration in to more, devices, platforms, tools, maturing the implementation, availability
+Probably the most important task for the future is the continued development of the C2PA specifications to not only increase the types of supported media but also mature the implementations to get as many people as possible to integrate C2PA into their products. For example this testbed could be significantly improved if FFmpeg would be able to sign the generated content directly with C2PA instead of require the complicated steps of sending it to a HTTP server to sign it and then forward it to the CDN.
 
-connecting to MoQT, breaking everything into chunks and periodic update are the bread and butter of MoQT
+It could also be an interesting experiment to integrate C2PA into the Media over QUIC transport (MoQT) protocol, because MoQT already breaks the data it sends into tiny chunks of data and the C2PA data could be separately transmitted on MoQT tracks rather than having the data embedded directly in the media fragments.
 
-investigate different hashing algorithms
+The \texttt{c2pa-rs} library currently also only supports the hashing algorithms SHA256, SHA394 and SHA512 and if would a worthwhile investigation to explore more hashing algorithms to potentially find one that is able to hash data faster, to further cut down the signing duration.
 
-integrate quality switching into rolling hash
+All the live streaming situation have all been exclusively been made with a single representation. It is imperative to expand the signing methods with the capability to signing a live stream with multiple representations to enable adaptive bitrate streaming. Important for these expansions is that there needs to be a way for the different qualities to be somehow connected with hashes to be able to provide a secure options to validate a a fragment even after having performed a quality switch. Equally important is that, despite the increased computation requirement, the signing still needs to remain fast to keep the latency impact as low as possible.
+
+In conclusion, C2PA promises a highly intriguing procedure of embedding the provenance and authenticity of a medium into itself. This technology can be a powerful tool to enable transparency of the creation process of media to allows users to verify the origin and validity of the media they are viewing.

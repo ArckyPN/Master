@@ -24,19 +24,19 @@
     - [x] Signer
     - [x] Distributer
     - [x] Consumer
-- [ ] Design (of the testbed, the four components / include CLI)
+- [x] Design (of the testbed, the four components / include CLI)
   - [x] Producer (Rust script to create FFmpeg command)
-    - [ ] CLI
+    - [x] CLI
     - [x] Settings File
   - [x] Signer (C2PA tool/library to sign Live Stream)
-    - [ ] CLI
+    - [x] CLI
     - [x] Alternative Signing Approaches
       - [x] Optimized Merkle Tree
       - [x] C2PA data in MPD
       - [x] C2PA data on server
       - [x] Rolling Hash
   - [x] CDN (content host / distributer)
-    - [ ] CLI
+    - [x] CLI
   - [x] Consumer (Client website to show / verify Live Stream)
 - [ ] Implementation (Specifics about the actual implementation)
   - [x] Environment (Devices used for Testing / Evaluation)
@@ -50,11 +50,9 @@
     - [x] Reading BmffHash Assertion (version issue)
     - [x] CDN caching (ReplayStream crate + DELETE from FFmpeg (extra) window size)
     - [x] Producer Inputs and their Specifics (e.g. WebCam stuff, external camera [Sony Program...], etc.)
-    - [ ] C2PA-compliant TLS certificates?
-    - [ ] Documentation (how to run testbed)?
-  - [ ] Documentation (helper shell scripts, install instructions?)
+    - [x] video.js
+    - [x] Documentation (helper scripts)
 - [ ] Evaluation
-  - [x] Lots of re-transmissions of updated Segments (// TODO where to put this?)
   - [ ] Performance Original Impl vs. New Live (signing duration Benchmark comp)
   - [ ] Latency Impact (signing duration is the added latency)
   - [ ] Data Transmission (Uploading to / Downloading from CDN)

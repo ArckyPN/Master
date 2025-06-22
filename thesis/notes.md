@@ -5,10 +5,7 @@
 ## Questions
 
 - Assistant Supervisor: all three?
-- reference C2PA Spec using a bibtex ref or directly with footnotes and links to the specific sections?
-- bibtex refernce of the DASH spec?
 - EventStream equivalent for HLS?
-- 
 
 ## Code Additions / Changes
 
@@ -35,26 +32,5 @@
 - CHANGE: number of proofs are now always in line to have the comparison hash in the init to be the root of the tree
 
 ## TODOs
-
-- Benchmark
-  - compare old signing with new signing
-    - prepare 100 fragments
-    - then loop over all fragments, each iteration signs all fragment up to the current fragment using both methods
-    - each iteration time is measured how long it took
-    - plot graph comparing the measured time each step
-    - should show that new method is significantly faster (especially the longer it runs)
-- Alternative approaches, uuid Boxes:
-  - on separate Server
-  - in MPD/Playlist
-    - FFmpeg timing is hard to work with
-    - expected order -> init, segments_1, manifests, segments_2, manifest, ...
-    - however, sometimes some segments arrive after the manifests
-    - need to keep an appropriate cache of everything until a segments has been processed
-      - after signing, check if manifests are cached
-        - yes: add uuid to manifests (for MPD need to wait for all reps)
-        - no: cache it and do the above as the manifests arrive
-        - some: do what is available and cache the segment as well
-      - when a manifest arrives, check if segments are cached
-        - same as above
 
 ## FIXMEs

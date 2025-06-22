@@ -51,12 +51,24 @@ In this section I will present the results of the above described benchmarks and
 
 I have split the data plots into two comparisons. One comparing each signing method in relation to the different representations, shown in \Cref{fig:sign-dur1} and the other comparing the signing method to each other per representation, shown in \Cref{fig:sign-dur2}.
 
-\todo{describe results}
+Since the original Merkle Tree signing method signs every single fragment that has been created over the course of the live stream, I expected the overall signing duration to steadily increase as the live stream gets longer. This expectation is confirmed when looking at \Cref{fig:sign-dur1-og}. The signing duration of all four representations linearly increases in proportion to the number of fragments that are being included in the signing process. It can also be deduced that the larger the input files are the stronger the duration increases. 
+
+I will score the performance of the original Merkle Tree signing method by looking at how many fragments can be signed within one second. Since the graphs are consistently linear, I will measure this score by taking the signing duration of the 100th fragment and extrapolating its signing duration to one second.
+
+The audio representation has the lowest signing duration of all, which is expected since it has also has the lowest input file sizes with an average of \texttt{31 kilobyte}. The score of this representation is \texttt{528} fragments, which can be signing within one second. The next fastest signing duration is by the low video representations with an average file size of \texttt{64 kilobyte}. The score of this representation is \texttt{344} fragments. The mid video representation has the second slowest signing duration with average file sizes of \texttt{467 kilobyte} with a score of \texttt{82} fragment. The slowest signing duration is expectedly measured on the high video representation with average file sizes of \texttt{3,752 kilobyte} and a score of only \texttt{13} fragments.
+
+The optimized Merkle Tree signing method uses essentially the same concepts of the original equivalent but with the added constraint that eight fragments are grouped into separate Merkle Trees. The expectations of this method is that the signing duration will look very similar for each individual Merkle Tree but reset every eight fragments. The plot in \Cref{fig:sign-dur1-opt} confirm this expectation.
+
+The plot perfectly shows the sawtooth-signal-like graph of this approach. It starts with a low signing duration then it increases linearly like the original method and then peaks at every eighth fragment before it resets back down to the low duration. The important metric of this approach is the peak signing duration, by which I will score the individual representations.
+
+The order slowest to fastest is the same as before. The audio representation is the fastest with a minimum signing duration around \texttt{8} milliseconds and a peak of \texttt{25} milliseconds. Again followed by the low video representation with a minimum duration of about \texttt{8} milliseconds and a peak of roughly \texttt{35} milliseconds. The next slowest is the mid video representation with the low point signing duration being on average \texttt{10} milliseconds and a maximum of around \texttt{100} milliseconds. The slowest is again the high video representation with minimum signing duration about \texttt{100} milliseconds and peaks up to \texttt{700} milliseconds.
+
+Look at the plot of the Rolling Hash signing method in \Cref{fig:sign-dur1-rh} is clear that this is fast method overall by a good margin. Since this approach only every signs the current fragment, the signing duration directly correlates to the input file size. The three lowest representation have near constant signing duration. The audio presentation has an average of \texttt{10.5} milliseconds. The video low and mid video representations have average signing duration of \texttt{11.8} and \texttt{21.3} milliseconds, respectively. The high video representation fluctuates a lot more than the other representations but the majority of the time it remains in roughly the same interval between \texttt{80} and \texttt{100} milliseconds with an overall average of \texttt{86.5} milliseconds. When looking at the plots of \Cref{fig:sign-dur1-rh} and \Cref{fig:file-size} side by side, it is very obvious that these results are expected. The files sizes for the lower representations line up the with stability of the signing duration and the fluctuation of the higher representations equally line up with the signing durations.
 
 \begin{figure}
     \centering
     \subfloat[Original Merkle Tree]{
-        \includegraphics[width=0.49\linewidth]{plots/time-orignial-merkle-tree.pdf}
+        \includegraphics[width=0.49\linewidth]{plots/time-original-merkle-tree.pdf}
         \label{fig:sign-dur1-og}
     }
     \subfloat[Optimized Merkle Tree]{
@@ -70,6 +82,8 @@ I have split the data plots into two comparisons. One comparing each signing met
     \caption{Signing Duration Results}
     \label{fig:sign-dur1}
 \end{figure}
+
+Now looking at the comparison of the signing methods to each other in \Cref{fig:sign-dur2}, it gets directly apparent that the signing methods all perform essentially the same in regards to what representation is being signed. However, these plots show very well that the original signing method is by a large margin the lowest signing method, with the optimized Merkle Tree signing method being much more competitive with the Rolling Hash method but the Rolling Hash method is still the best without a doubt.
 
 \begin{figure}
     \centering
@@ -97,12 +111,16 @@ I have split the data plots into two comparisons. One comparing each signing met
 
 For this benchmark I have split the data plots into the same comparisons as before: comparing each signing method in relation to the different representations are shown in \Cref{fig:upload1} and the signing methods compared to each other per representation are shown in \Cref{fig:upload2}.
 
-\todo{describe results}
+In essence, the results of the required data upload size is exactly the same as the signing duration benchmark. The original Merkle Tree method requires by far the most data upload, of which the majority is entirely redundant, because every time a new fragment is being signed, every single prior fragment is being signed as well and subsequently they are have to be published anew to the CDN to have the most up-to-date data available. As before it also shows a linear increase as the number of fragment rises. All the representations have an gradient of slightly more then the average file size per fragment, as shown in \Cref{fig:file-size}. The reason by this is that with every new fragment everything from before has to be uploaded again, as already mentioned and the gradient is a little more because the added C2PA data is now included in the files. These results are shown in \Cref{fig:upload1-og}.
+
+The same goes for the optimized Merkle Tree signing approach, shown in \Cref{fig:upload1-opt}. Again a sawtooth-signal-like graph can be observed which resets every eighth fragment. In all cases the needed upload is considerably lower than compared to the original method.
+
+Lastly, the Rolling Hash results are equally the same, as seen in \Cref{fig:upload1-rh}. The three lower representations again have a near constant value and the highest fluctuates slightly but overall still significantly lower than the other two methods.
 
 \begin{figure}
     \centering
     \subfloat[Original Merkle Tree]{
-        \includegraphics[width=0.49\linewidth]{plots/upload-orignial-merkle-tree.pdf}
+        \includegraphics[width=0.49\linewidth]{plots/upload-original-merkle-tree.pdf}
         \label{fig:upload1-og}
     }
     \subfloat[Optimized Merkle Tree]{

@@ -2,27 +2,27 @@
 
 \section{Motivation\label{sec:moti}}
 
-For millennia human beings have been forging documents, paintings, photographs, videos and any other type of media, ranging from analog manipulations, like altering shipping manifests on clay tablets, duplicating paintings and altering the development of photos and films, to digital tools with varying levels of difficulties, from complex tools like PhotoShop, GIMP and Photopea for images, AfterEffects, Blender and Nuke for videos, to easy tools like image filters on social media.
+For millennia human beings have been forging documents, paintings, photographs, videos, and any other type of media, ranging from analog manipulations, like altering shipping manifests on clay tablets, duplicating paintings and altering the development of photos and films, to digital tools with varying levels of difficulties, from complex tools like PhotoShop, GIMP and Photopea for images, AfterEffects, Blender, and Nuke for videos, to easy tools like image filters on social media.
 
-In this digital age, these tools are not only getting more accessible, but also easier to use, while delivering results better than ever. This has the consequence that it is getting more difficult to discern real media from manipulated media, especially for people that are less familiar with these tools.
+In this digital age, these tools are not only becoming more accessible, but also easier to use, while delivering better results than ever. This has the consequence that it is becoming more difficult to discern real media from manipulated media, especially for people who are less familiar with these tools.
 
-To make things worse, in the past few years many new tools have been released that are capable of generating new media from just a simple text prompt. Large Language Models (LLMs), like ChatGPT, Gemini and DeepSeek, are capable of generating texts, like essays, articles and more. There are also image generators, like Midjourney, Stable Diffusion and Firefly, as well as Sora, Synthesia and Capsule for videos. The list of these tools grows steadily every day, with numerous additional application types: music generation, voice cloning, face replacements and many more.
+To make matters worse, in the past few years many new tools have been released that are capable of generating new media from just a simple text prompt. Large Language Models (LLMs), like ChatGPT, Gemini, and DeepSeek, are capable of generating texts, like essays, articles, and more. There are also image generators, like Midjourney, Stable Diffusion and Firefly, as well as Sora, Synthesia, and Capsule for videos. The list of these tools grows steadily every day, with numerous additional application types: music generation, voice cloning, face replacements, and many more.
 
-All this has lead to the founding of the Coalition for Content Provenance and Authenticity (C2PA) by Adobe, Arm, BBC, Intel, Microsoft and Truepic on February 22nd, 2021 \footnote{C2PA Founding Press Release: \url{https://c2pa.org/post/c2pa_initial_pr/}}. The ultimate goal of C2PA is the development and integration of a taper-proof manifest into digital media, which protocol all steps it has gone through from its creation to the present, as well as the tools, people, devices and locations involved and any additional relevant metadata. This allows everyone interacting with C2PA-signed media to verify that that media is trustworthy and look at the metadata and potentially see that it has been automatically generated, edited, applied with a filter or anything else.
+All this has led to the founding of the Coalition for Content Provenance and Authenticity (C2PA) by Adobe, Arm, BBC, Intel, Microsoft, and Truepic on February 22nd, 2021 \footnote{C2PA Founding Press Release: \url{https://c2pa.org/post/c2pa_initial_pr/}}. The ultimate goal of C2PA is the development and integration of a taper-proof manifest into digital media, which protocol all steps it has gone through from its creation to the present, as well as the tools, people, devices and locations involved and any additional relevant metadata. This allows everyone interacting with C2PA-signed media to verify that that media is trustworthy and look at the metadata and potentially see that it has been automatically generated, edited, applied with a filter, or anything else.
 
-At the writing of this thesis there is no specifications in regards to applying C2PA to live streaming and there is also not much material about other people researching into this topic. This thesis will be filling in this gap by implementing and evaluating C2PA in a live streaming context.
+At the writing of this thesis, there is no specification in regards to applying C2PA to live streaming media and there is also not much material about other people researching into this topic. This thesis will fill in this gap by implementing and evaluating C2PA in a live streaming context.
 
 \section{Objective\label{sec:objective}}
 
-The current version 2.2 of the C2PA technical specification \footnote{C2PA Technical Specification: \url{https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html}} has no explicit specifications for live streaming content and there are currently no public discussions or proof-of-concepts on how C2PA signing should work when live streaming media. There is, however, a specification with a working implementation for fragmented BMFF (Base Media File Format) media.
+The current version 2.2 of the C2PA technical specification \footnote{C2PA Technical Specification: \url{https://c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html}} has no explicit specifications for live streaming content and there are currently no public discussions or proof-of-concepts on how the C2PA signing should work on live streaming media. However, there is a specification with a working implementation for fragmented BMFF (Base Media File Format) media.
 
 This thesis will describe and evaluate a proof-of-concept of adapting the existing fragmented BMFF implementation to a live streaming testbed compliant with the DASH and HLS streaming protocols. In addition to this, it will also propose an alternative approach that is specifically catered to live streaming.
 
 \section{Scope\label{sec:scope}}
 
-The aforementioned proof-of-concept is a live streaming testbed which will roughly emulate a real-world scenario. It consists of four components.
+The aforementioned proof-of-concept is a live streaming testbed, which will roughly emulate a real-world scenario. It consists of four components.
 
-The first component is Producer and its tasks is to create a DASH and HLS live stream. That live stream is then forwarded to the Signer, which will sign the live stream with a C2PA manifest. From there the signed live stream is published to the CDN (content delivery network), which will host the live stream and make it available for consumption. Finally, the Consumer will request the live stream from the CDN, play it back and also validate that the received live stream is trustworthy based on the embedded C2PA manifest. This testbed is visualized in \Cref{fig:testbed}.
+The first component is the Producer with the task of creating a DASH and HLS live stream. That live stream is then forwarded to the Signer, which will sign the live stream with a C2PA manifest. The signed live stream is then published to the Distributor, an emulated CDN (content delivery network) hosting the live stream to make it available for consumption. Finally, the Consumer will playback the live stream, while simultaneously validating the trustworthiness of the embedded C2PA manifest. This testbed is visualized in \Cref{fig:testbed}.
 
 \begin{figure}[H]
     \centering
@@ -33,7 +33,7 @@ The first component is Producer and its tasks is to create a DASH and HLS live s
         \node (consumer) [component, below of=cdn, yshift=-1cm] {Consumer};
     
         \draw [arrow] (producer) -- node[anchor=east, text width=2cm, text centered, xshift=0.15cm] {create MPEG-DASH / HLS stream} (c2pa);
-        \draw [arrow] (c2pa) -- node[anchor=south, text width=2cm, text centered] {publish signed segments} (cdn);
+        \draw [arrow] (c2pa) -- node[anchor=south, text width=2cm, text centered] {publish signed fragments} (cdn);
         \draw [arrow] (consumer) -- node[anchor=east, text width=2cm, text centered, xshift=0.4cm] {request stream} (cdn);
         \draw [arrow] (cdn) -- node[anchor=west, text width=2cm, text centered, xshift=-0.4cm] {provide stream} (consumer);
     \end{tikzpicture}
@@ -46,13 +46,13 @@ The first component is Producer and its tasks is to create a DASH and HLS live s
 The remaining thesis is structured into the following chapters:
 \\
 \\
-\textbf{Chapter \ref{cha:chapter2}} will describe the State of the Art with a introduction to HTTP Adaptive Streaming (HAS), an in-depth overview of C2PA as well as concurrent live streaming approaches.
+\textbf{Chapter \ref{cha:chapter2}} will describe the State of the Art with an introduction to HTTP Adaptive Streaming (HAS), an in-depth overview of C2PA, as well as related works.
 \\
 \\
 \textbf{Chapter \ref{cha:chapter3}} will list the requirements of this thesis and its implementation.
 \\
 \\
-\textbf{Chapter \ref{cha:chapter4}} will go over the design of the testbed, including details of the four components.
+\textbf{Chapter \ref{cha:chapter4}} will detail the design of the testbed, including specifics on the four components.
 \\
 \\
 \textbf{Chapter \ref{cha:chapter5}} will outline specific technical aspects of the implementation.
@@ -61,4 +61,4 @@ The remaining thesis is structured into the following chapters:
 \textbf{Chapter \ref{cha:chapter6}} will evaluate C2PA in a live streaming scenario as part of this proof-of-concept.
 \\
 \\
-\textbf{Chapter \ref{cha:chapter7}} will conclude this thesis with a summary, dissemination and an outlook to possible further research.
+\textbf{Chapter \ref{cha:chapter7}} will conclude this thesis with a summary, dissemination, and an outlook to possible further research.

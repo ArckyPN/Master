@@ -34,7 +34,7 @@ The \texttt{Claim} has references to all Assertions of the C2PA Manifest. It is 
 
 The \texttt{Claim Signature} is the final part of the C2PA Manifest and it is the digital signature of the Claim.
 
-\subsection{C2PA Manifest}
+\subsection{Manifest}
 
 The \texttt{C2PA Manifest} contains the three aforementioned parts: the Claim Signature, the Claim and the Assertions. Each Manifest contains one Claim Signature, one Claim and a set of Assertions. They are contained in the Manifest Store of a media asset.
 
@@ -241,10 +241,3 @@ The validation of a fragment requires the successful validation of the accompany
 As previously mentioned, in the context of a fragment MP4 video, the initialization fragment file contains the \texttt{"uuid"} BMFF Box with the Manifest Store and each corresponding media fragment contains a \texttt{"uuid"} BMFF Box with the CBOR-encoded \texttt{BmffMerkleMap}.
 
 Currently, the signing process is only intended to be used for VoD content. It requires a full set of media fragments and the initialization fragment. The BMFF-specific parts of the signing process starts with the creation of a placeholder Merkle Tree based on the number of media fragments. In the next step the fragments all receive a preliminary \texttt{BmffMerkleMap} embedded into their \texttt{"uuid"} BMFF Box, it contains the final values for the two ID fields and the location but the hashes are only placeholder data. Now that the media fragments have the embedded \texttt{"uuid"} BMFF Box, they are ready to be hashed. These hashes can now be used to generate the final Merkle Tree and this in-turn can be used to insert the correct proof hashes in the media fragments. Now, any of the rows of the Merkle Tree can be added into the \texttt{MerkleMap} alongside a placeholder hash of the initialization fragment. This preliminary data is now inserted into the initialization fragment, which is now ready to be hashed. This hash replaces the previously set placeholder.
-
-\section{Related Work}
-
-\todo[inline]{DRM?}
-\todo[inline]{Fingerprinting?}
-\todo[inline]{Watermarking?}
-\todo[inline]{other live pocs}

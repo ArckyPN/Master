@@ -7,6 +7,7 @@ This chapter details the testbed implementation. It provides insight into the co
 The following hardware and software has been used during the development process:
 
 \begin{table}[H]
+    \centering
     \begin{tabular}{l|lll|}
         \cline{2-4}
                                                                                                    & \multicolumn{1}{l|}{\textbf{Work Laptop 1}}                                               & \multicolumn{1}{l|}{\textbf{Work Laptop 2}}                                              & \textbf{Private Laptop}                                        \\ \hline
@@ -62,7 +63,7 @@ The \textbf{producer} directory is a git submodule of my FFmpeg script generator
 
 Over the course of the implementation of this testbed I came across a number of challenges and noteworthy aspects. This section will go over these.
 
-\subsection{Signing Optimization\label{sec:optimization}}
+\subsection{Signing Optimizations\label{sec:optimization}}
 
 The primary task of this thesis was the optimization of the signing process to be performant enough to be integrated into a live streaming application. The first approach was the optimization of the existing Merkle Tree method. During that implementation I came up with two mutations of that approach which aimed to deal with some of the shortcomings I noticed during development. Both of these kept the actual C2PA data in the "uuid" BMFF boxes separate from the fragment files. The first put this data on a separate server, while the second wrote the C2PA data into the DASH and HLS manifests. 
 
@@ -183,7 +184,7 @@ The second half the changes needed to be done in Rust code. They started out wit
 
 The final step after the implementation was building the changes into usable packages using \texttt{rush} by running \texttt{rush build} in a terminal. Once this command had run its course, the code changes were ready to use.
 
-\subsection{Styling Video Element}
+\subsection{Styling the Video Element}
 
 The people behind the \texttt{c2pa-rs} code also have a fork of the \texttt{dash.js} video player \footnote{C2PA dash.js Player: \url{https://github.com/contentauth/dash.js/tree/c2pa-dash/samples/c2pa}}, where they have created a video player combining \texttt{dash.js} and \texttt{video.js} \footnote{video.js Homepage: \url{https://videojs.com/}} that is able to validate the C2PA Manifests of the video playing and show the status of the validation. \texttt{video.js} is a JavaScript library that enables customizing a HTML video element.
 
@@ -198,16 +199,19 @@ The next issue was the filling of the overlay menu with the information from the
 Finally, I had the issue that the seekbar itself of the timeline would not show up when the live stream starts. Sometimes it showed later into the running stream with wildly different delays and sometimes it would never show up. When using a VoD stream the seekbar showed up right away. Eventually, I came across two GitHub issues regarding this dilemma \footnote{\texttt{video.js} Issue \#7095: \url{https://github.com/videojs/video.js/issues/7095}} \footnote{\texttt{video.js} Issue \#6630: \url{https://github.com/videojs/video.js/issues/6630}} on the \texttt{video.js} repository. The problem was that for live streams \texttt{video.js} usually shows no seekbar at all, instead it shows an indicator that a live stream is being watched. However, there is an options for the initial setup to enable a live UI which would show a seekbar. I was using this options from the start. The developers of \texttt{video.js} are of the opinion, though, that it makes little sense to show a seekbar when only very little of the live stream has been loaded into the browser and have configured the live UI to only show the seekbar once at least 30 seconds of media has been loaded. Fortunately, it is possible to configure this parameter and I have set the value to zero seconds, which makes the seekbar appear right away.
 
 \begin{figure}
+    \centering
     \includegraphics[width=0.95\linewidth, fbox]{videojs-styling.png}
     \caption{Seekbar Video Styling}
     \label{fig:seekbar}
 \end{figure}
 \begin{figure}
+    \centering
     \includegraphics[width=0.95\linewidth, fbox]{overlay-success.png}
     \caption{Video Content Credentials Overlay}
     \label{fig:overlay-success}
 \end{figure}
 \begin{figure}
+    \centering
     \includegraphics[width=0.95\linewidth, fbox]{overlay-failure.png}
     \caption{Video Content Credentials Overlay With Errors}
     \label{fig:overlay-failure}
